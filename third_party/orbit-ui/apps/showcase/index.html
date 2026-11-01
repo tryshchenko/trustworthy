@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en" data-orbit-theme="minimal" data-orbit-density="comfortable" class="orb-root">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="Orbit Projects — a demo project-management app built with the Orbit UI design system."
+    />
+    <meta name="theme-color" content="#EAF6FC" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Orbit Projects</title>
+    <script>
+      // Apply persisted theme before first paint to avoid a flash of the wrong theme.
+      try {
+        var s = JSON.parse(localStorage.getItem("orbit-projects:theme") || "{}");
+        if (s.theme) document.documentElement.setAttribute("data-orbit-theme", s.theme);
+        if (s.density) document.documentElement.setAttribute("data-orbit-density", s.density);
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,299 @@
+/* ==========================================================================
+   Base: root typography, focus, accessibility helpers, tone + layout utilities.
+   All Orbit selectors are prefixed `orb-` so they never collide with app CSS.
+   ========================================================================== */
+
+.orb-root {
+  font-family: var(--orb-font-sans);
+  font-size: var(--orb-text-md);
+  line-height: var(--orb-leading-normal);
+  color: var(--orb-color-text-primary);
+  background-color: var(--orb-color-canvas);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv11", "ss01", "ss03";
+}
+
+/* When the provider targets <html>, keep the root at 100% so rem-based tokens
+   resolve against the user's browser font size; body text gets the 14px body size. */
+:root.orb-root {
+  font-size: 100%;
+}
+:root.orb-root body {
+  font-size: var(--orb-text-md);
+}
+
+:where(.orb-root) *,
+:where(.orb-root) *::before,
+:where(.orb-root) *::after {
+  box-sizing: border-box;
+}
+
+:where([class^="orb-"], [class*=" orb-"]) {
+  box-sizing: border-box;
+}
+
+/* Native form controls inherit typography. */
+:where(.orb-root) :where(button, input, textarea, select) {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+}
+
+/* One consistent, highly visible focus indicator (outline survives forced-colors mode). */
+:where(.orb-root) :focus-visible,
+[class^="orb-"]:focus-visible {
+  outline: 2px solid var(--orb-color-border-focus);
+  outline-offset: 2px;
+}
+
+.orb-sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.orb-skip-link {
+  position: absolute;
+  left: 12px;
+  top: -100px;
+  z-index: var(--orb-z-tooltip);
+  padding: 10px 16px;
+  border-radius: var(--orb-radius-md);
+  background: var(--orb-color-accent);
+  color: var(--orb-color-text-on-accent);
+  font-weight: var(--orb-weight-semibold);
+  text-decoration: none;
+  box-shadow: var(--orb-shadow-lg);
+}
+.orb-skip-link:focus {
+  top: 12px;
+}
+
+/* Thin themed scrollbars. */
+.orb-root,
+.orb-root * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--orb-scrollbar-thumb) transparent;
+}
+
+.orb-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  margin: 0 1px;
+  border-radius: var(--orb-radius-xs);
+  border: 1px solid var(--orb-color-border-default);
+  border-bottom-width: 2px;
+  background: var(--orb-color-surface-solid);
+  color: var(--orb-color-text-secondary);
+  font-family: var(--orb-font-sans);
+  font-size: var(--orb-text-2xs);
+  font-weight: var(--orb-weight-semibold);
+  line-height: 1;
+}
+
+/* ----------------------------------------------------------------- Tones */
+
+.orb-tone-info {
+  --orb-tone-bg: var(--orb-color-info-bg);
+  --orb-tone-fg: var(--orb-color-info-fg);
+  --orb-tone-border: var(--orb-color-info-border);
+  --orb-tone-solid: var(--orb-color-info-solid);
+}
+.orb-tone-success {
+  --orb-tone-bg: var(--orb-color-success-bg);
+  --orb-tone-fg: var(--orb-color-success-fg);
+  --orb-tone-border: var(--orb-color-success-border);
+  --orb-tone-solid: var(--orb-color-success-solid);
+}
+.orb-tone-warning {
+  --orb-tone-bg: var(--orb-color-warning-bg);
+  --orb-tone-fg: var(--orb-color-warning-fg);
+  --orb-tone-border: var(--orb-color-warning-border);
+  --orb-tone-solid: var(--orb-color-warning-solid);
+}
+.orb-tone-danger {
+  --orb-tone-bg: var(--orb-color-danger-bg);
+  --orb-tone-fg: var(--orb-color-danger-fg);
+  --orb-tone-border: var(--orb-color-danger-border);
+  --orb-tone-solid: var(--orb-color-danger-solid);
+}
+.orb-tone-neutral {
+  --orb-tone-bg: var(--orb-color-neutral-bg);
+  --orb-tone-fg: var(--orb-color-neutral-fg);
+  --orb-tone-border: var(--orb-color-neutral-border);
+  --orb-tone-solid: var(--orb-color-neutral-solid);
+}
+.orb-tone-discovery {
+  --orb-tone-bg: var(--orb-color-discovery-bg);
+  --orb-tone-fg: var(--orb-color-discovery-fg);
+  --orb-tone-border: var(--orb-color-discovery-border);
+  --orb-tone-solid: var(--orb-color-discovery-solid);
+}
+.orb-tone-teal {
+  --orb-tone-bg: var(--orb-color-teal-bg);
+  --orb-tone-fg: var(--orb-color-teal-fg);
+  --orb-tone-border: var(--orb-color-teal-border);
+  --orb-tone-solid: var(--orb-color-teal-solid);
+}
+.orb-tone-text {
+  color: var(--orb-tone-solid);
+}
+
+/* ------------------------------------------------------------- Utilities */
+
+.orb-pad-none {
+  padding: 0;
+}
+.orb-pad-sm {
+  padding: var(--orb-space-3);
+}
+.orb-pad-md {
+  padding: var(--orb-density-panel-padding);
+}
+.orb-pad-lg {
+  padding: var(--orb-space-8);
+}
+.orb-radius-none {
+  border-radius: 0;
+}
+.orb-radius-md {
+  border-radius: var(--orb-radius-md);
+}
+.orb-radius-lg {
+  border-radius: var(--orb-radius-lg);
+}
+.orb-radius-xl {
+  border-radius: var(--orb-radius-xl);
+}
+.orb-radius-2xl {
+  border-radius: var(--orb-radius-2xl);
+}
+.orb-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--orb-space-2);
+  min-width: 0;
+}
+.orb-text-secondary {
+  color: var(--orb-color-text-secondary);
+}
+
+/* Typographic roles */
+.orb-type-page-title {
+  font-size: var(--orb-type-page-title-size);
+  line-height: var(--orb-type-page-title-leading);
+  font-weight: var(--orb-type-page-title-weight);
+  letter-spacing: var(--orb-type-page-title-tracking);
+}
+.orb-type-section-title {
+  font-size: var(--orb-type-section-title-size);
+  line-height: var(--orb-type-section-title-leading);
+  font-weight: var(--orb-type-section-title-weight);
+  letter-spacing: var(--orb-type-section-title-tracking);
+}
+.orb-type-card-title {
+  font-size: var(--orb-type-card-title-size);
+  line-height: var(--orb-type-card-title-leading);
+  font-weight: var(--orb-type-card-title-weight);
+}
+.orb-type-body {
+  font-size: var(--orb-type-body-size);
+  line-height: var(--orb-type-body-leading);
+}
+.orb-type-meta {
+  font-size: var(--orb-type-meta-size);
+  line-height: var(--orb-type-meta-leading);
+  font-weight: var(--orb-type-meta-weight);
+  color: var(--orb-color-text-secondary);
+}
+.orb-type-overline {
+  font-size: var(--orb-type-overline-size);
+  font-weight: var(--orb-type-overline-weight);
+  letter-spacing: var(--orb-type-overline-tracking);
+  text-transform: uppercase;
+  color: var(--orb-color-text-secondary);
+}
+
+/* Shared keyframes */
+@keyframes orb-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes orb-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes orb-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+@keyframes orb-pop-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+@keyframes orb-pop-out {
+  to {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+}
+@keyframes orb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes orb-shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+@keyframes orb-slide-in-right {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+@keyframes orb-slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+}
+@keyframes orb-slide-in-bottom {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes orb-indeterminate {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+/* Themed chrome (see `chrome` tokens) re-resolves text colour from its own tokens. */
+[data-orbit-chrome] {
+  color: var(--orb-color-text-primary);
+}

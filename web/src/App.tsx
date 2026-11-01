@@ -1,0 +1,95 @@
+import { Spinner, Toaster } from "@orbit/ui";
+import { useEffect } from "react";
+import { Shell } from "./components/Shell";
+import { navigate, matchPath, useLocation } from "./lib/router";
+import { useSession, useSites } from "./lib/queries";
+import { AccountPage } from "./pages/AccountPage";
+import { AuthPage } from "./pages/AuthPage";
+import { GoalsPage } from "./pages/GoalsPage";
+import { InstallPage } from "./pages/InstallPage";
+import { LivePage } from "./pages/LivePage";
+import { NewSitePage } from "./pages/NewSitePage";
+import { NotFound } from "./pages/NotFound";
+import { OverviewPage } from "./pages/OverviewPage";
+import { PrivacyPage } from "./pages/PrivacyPage";
+import { SiteSettingsPage } from "./pages/SiteSettingsPage";
+
+export type SiteView = "overview" | "live" | "goals" | "install" | "settings";
+
+function FullscreenSpinner() {
+  return (
+    <div className="grid h-full place-items-center" style={{ background: "#0A2846" }}>
+      <Spinner size="lg" label="Loading Trustworthy" />
+    </div>
+  );
+}
+
+export function App() {
+  const session = useSession();
+  if (session.isPending) return <FullscreenSpinner />;
+  if (session.isError || !session.data) {
+    return <AuthPage mode="error" error={session.error?.message} />;
+  }
+  if (session.data.setupRequired) return <AuthPage mode="setup" />;
+  if (!session.data.authenticated) return <AuthPage mode="login" />;
+  return (
+    <>
+      <AuthedApp email={session.data.email ?? ""} baseUrl={session.data.baseUrl} version={session.data.version} />
+      <Toaster />
+    </>
+  );
+}
+
+function AuthedApp({ email, baseUrl, version }: { email: string; baseUrl?: string; version: string }) {
+  const { pathname } = useLocation();
+  const sites = useSites();
+  const list = sites.data ?? [];
+
+  const siteMatch =
+    matchPath("/sites/:id", pathname) ?? matchPath("/sites/:id/:view", pathname);
+  const siteId = siteMatch ? Number(siteMatch.id) : null;
+  const site = siteId != null ? list.find((s) => s.id === siteId) : undefined;
+  const view = (siteMatch?.view ?? "overview") as SiteView;
+
+  // "/" goes to the first site, or onboarding when there are none.
+  useEffect(() => {
+    if (!sites.data || pathname !== "/") return;
+    const first = sites.data[0];
+    navigate(first ? `/sites/${first.id}` : "/new", { replace: true });
+  }, [sites.data, pathname]);
+
+  if (sites.isPending) return <FullscreenSpinner />;
+
+  let content: React.ReactNode;
+  if (pathname === "/new") content = <NewSitePage first={list.length === 0} />;
+  else if (pathname === "/account") content = <AccountPage email={email} version={version} />;
+  else if (pathname === "/privacy") content = <PrivacyPage />;
+  else if (site) {
+    switch (view) {
+      case "overview":
+        content = <OverviewPage key={site.id} site={site} />;
+        break;
+      case "live":
+        content = <LivePage site={site} />;
+        break;
+      case "goals":
+        content = <GoalsPage key={site.id} site={site} />;
+        break;
+      case "install":
+        content = <InstallPage site={site} baseUrl={baseUrl} />;
+        break;
+      case "settings":
+        content = <SiteSettingsPage key={site.id} site={site} />;
+        break;
+      default:
+        content = <NotFound />;
+    }
+  } else if (pathname === "/") content = null;
+  else content = <NotFound />;
+
+  return (
+    <Shell sites={list} site={site} view={site ? view : null} pathname={pathname} email={email}>
+      {content}
+    </Shell>
+  );
+}

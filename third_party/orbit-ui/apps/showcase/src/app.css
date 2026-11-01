@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+/* Expose Orbit tokens to Tailwind utilities so app-level layout uses the same
+   design language as the component library (e.g. `text-fg-muted`, `rounded-xl`). */
+@theme inline {
+  --font-sans: var(--orb-font-sans);
+  --color-fg: var(--orb-color-text-primary);
+  --color-fg-muted: var(--orb-color-text-secondary);
+  --color-fg-subtle: var(--orb-color-text-tertiary);
+  --color-surface: var(--orb-color-surface-solid);
+  --color-sunken: var(--orb-color-surface-sunken);
+  --color-line: var(--orb-color-border-subtle);
+  --color-accent: var(--orb-color-accent);
+  --color-accent-fg: var(--orb-color-accent-text);
+  --radius-md: var(--orb-radius-md);
+  --radius-lg: var(--orb-radius-lg);
+  --radius-xl: var(--orb-radius-xl);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--orb-color-canvas);
+  color: var(--orb-color-text-primary);
+}

@@ -1,0 +1,29 @@
+{
+  "name": "@orbit/showcase",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Orbit Projects — a Jira-like demo built entirely with @orbit/ui.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json --noEmit && vite build",
+    "preview": "vite preview --port 4173",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:e2e": "playwright test --project=e2e",
+    "test:visual": "playwright test --project=visual"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.2.0",
+    "@orbit/icons": "workspace:*",
+    "@orbit/tokens": "workspace:*",
+    "@orbit/ui": "workspace:*",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.0",
+    "@playwright/test": "1.63.0",
+    "@tailwindcss/vite": "^4.1.0",
+    "tailwindcss": "^4.1.0"
+  }
+}

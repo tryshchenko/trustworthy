@@ -1,0 +1,137 @@
+/* ==========================================================================
+   Materials — the Aero "glass" system.
+
+   glass/subtle   light frosting, large regions (sidebar)
+   glass/standard default chrome (header, floating toolbars)
+   glass/raised   near-opaque overlays (popovers, inspector, dialogs)
+   surface/solid  opaque, for dense content (cards, tables)
+   surface/selected
+
+   Each glass material = translucent fill + sheen gradient + backdrop blur/saturate
+   + luminous 1px border + top-edge highlight + diffuse shadow. When backdrop-filter
+   is unsupported the fill falls back to an opaque surface.
+   ========================================================================== */
+
+.orb-material-subtle,
+.orb-material-standard,
+.orb-material-raised {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--orb-glass-fill);
+  background-image: var(--orb-glass-sheen);
+  -webkit-backdrop-filter: blur(var(--orb-glass-blur)) saturate(var(--orb-glass-saturate));
+  backdrop-filter: blur(var(--orb-glass-blur)) saturate(var(--orb-glass-saturate));
+  border: 1px solid var(--orb-glass-border);
+  box-shadow:
+    var(--orb-glass-highlight),
+    0 0 0 1px var(--orb-glass-border-outer),
+    var(--orb-material-shadow, var(--orb-shadow-sm));
+  background-clip: padding-box;
+}
+
+.orb-material-subtle {
+  --orb-glass-fill: var(--orb-glass-subtle-bg);
+  --orb-glass-blur: var(--orb-glass-blur-subtle);
+}
+.orb-material-standard {
+  --orb-glass-fill: var(--orb-glass-standard-bg);
+  --orb-glass-blur: var(--orb-glass-blur-standard);
+}
+.orb-material-raised {
+  --orb-glass-fill: var(--orb-glass-raised-bg);
+  --orb-glass-blur: var(--orb-glass-blur-raised);
+  --orb-material-shadow: var(--orb-shadow-lg);
+}
+
+.orb-material-solid {
+  background: var(--orb-color-surface-solid);
+  border: 1px solid var(--orb-color-border-subtle);
+  box-shadow: var(--orb-material-shadow, var(--orb-shadow-sm));
+}
+.orb-material-selected {
+  background: var(--orb-color-surface-selected);
+  border: 1px solid var(--orb-color-surface-selected-border);
+  box-shadow: var(--orb-material-shadow, var(--orb-shadow-sm));
+}
+
+/* Elevation */
+.orb-elev-flat {
+  --orb-material-shadow: 0 0 #0000;
+}
+.orb-elev-low {
+  --orb-material-shadow: var(--orb-shadow-sm);
+}
+.orb-elev-raised {
+  --orb-material-shadow: var(--orb-shadow-md);
+}
+.orb-elev-floating {
+  --orb-material-shadow: var(--orb-shadow-xl);
+}
+
+/* Explicit blur overrides */
+.orb-blur-none {
+  --orb-glass-blur: 0px;
+}
+.orb-blur-sm {
+  --orb-glass-blur: var(--orb-blur-sm);
+}
+.orb-blur-md {
+  --orb-glass-blur: var(--orb-blur-md);
+}
+.orb-blur-lg {
+  --orb-glass-blur: var(--orb-blur-lg);
+}
+
+/* Border treatments */
+.orb-border-none {
+  border-color: transparent;
+}
+.orb-border-hairline {
+  --orb-glass-highlight: 0 0 #0000;
+  border-color: var(--orb-color-border-subtle);
+}
+.orb-border-luminous::after {
+  /* Soft blue ambient reflection along the lower edge. */
+  content: "";
+  position: absolute;
+  inset: auto 12% -1px 12%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--orb-color-accent-glow), transparent);
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.orb-glass--interactive {
+  cursor: pointer;
+  transition:
+    transform var(--orb-duration-normal) var(--orb-ease-standard),
+    box-shadow var(--orb-duration-normal) var(--orb-ease-standard);
+}
+.orb-glass--interactive:hover {
+  transform: translateY(-1px);
+  --orb-material-shadow: var(--orb-shadow-md);
+}
+
+/* No backdrop-filter support → opaque fallback so text never sits on raw imagery. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .orb-material-subtle,
+  .orb-material-standard,
+  .orb-material-raised {
+    background-color: var(--orb-color-surface-raised);
+    background-image: none;
+  }
+}
+
+/* Windows High Contrast / forced colours: materials become plain system surfaces. */
+@media (forced-colors: active) {
+  .orb-material-subtle,
+  .orb-material-standard,
+  .orb-material-raised,
+  .orb-material-solid,
+  .orb-material-selected {
+    background: Canvas;
+    border: 1px solid CanvasText;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+}

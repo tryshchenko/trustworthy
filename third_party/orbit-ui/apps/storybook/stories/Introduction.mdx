@@ -1,0 +1,47 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Introduction" />
+
+# Orbit UI
+
+**Orbit UI** is a modern interpretation of _Frutiger Aero_ for professional productivity software — optimistic sky blues and aqua, frosted glass and soft light, applied with the restraint of an enterprise design system.
+
+This Storybook **is the design source of truth**. There is no Figma file: tokens, materials, components and composed patterns all live here, rendered by the same code you ship.
+
+## How to use this workspace
+
+- **Theme** (toolbar 🎨): Aero Minimal (default), Aero Scenic, Aero Dark, Accessible — or _All themes side by side_ to compare.
+- **Density**: comfortable or compact. Components read `--orb-density-*` tokens, so nothing re-renders.
+- **Transparency**: preview the reduced-transparency fallback (also triggered by the OS setting).
+- **Viewport**: mobile, tablet, laptop and desktop presets.
+- **Accessibility** panel: every story is checked with axe-core.
+
+## Design rule: 70 / 20 / 10
+
+| Share   | What                             | Where                                                |
+| ------- | -------------------------------- | ---------------------------------------------------- |
+| **70%** | Clean, readable, opaque surfaces | Cards, tables, forms, issue content                  |
+| **20%** | Aero materials and soft depth    | Sidebar, header, popovers, inspector, primary action |
+| **10%** | Atmosphere and delight           | Background scenery, highlights, the active tab glow  |
+
+Glass is reserved for _chrome_, never for dense, repeated content: an issue card is opaque so a board with 500 cards costs nothing extra to composite.
+
+## Packages
+
+| Package         | Purpose                                                                                           |
+| --------------- | ------------------------------------------------------------------------------------------------- |
+| `@orbit/tokens` | Primitive scales, semantic themes, materials, motion, density — CSS custom properties + typed TS  |
+| `@orbit/icons`  | Lucide re-export plus Orbit glyphs (logo, issue types)                                            |
+| `@orbit/ui`     | React components: foundation, Aero signature components and project-management product components |
+
+```tsx
+import "@orbit/tokens/tokens.css";
+import "@orbit/ui/styles.css";
+import { ThemeProvider, AeroButton } from "@orbit/ui";
+
+<ThemeProvider defaultTheme="minimal">
+  <AeroButton>Create issue</AeroButton>
+</ThemeProvider>;
+```
+
+Browse **Patterns → Project board** for a full composition, or the [README](https://github.com/) in the repository for setup and contribution guidelines.

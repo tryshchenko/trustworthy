@@ -1,0 +1,52 @@
+# Trustworthy + PostgreSQL. Works locally (`docker compose up`) and as a
+# Coolify "Docker Compose" resource. In Coolify, the SERVICE_* variables are
+# generated for you; locally, the fallbacks after ":-" are used.
+services:
+  app:
+    build:
+      context: .
+      args:
+        VERSION: ${VERSION:-dev}
+    restart: unless-stopped
+    environment:
+      # Coolify: assigns a domain and routes it to port 8080.
+      - SERVICE_FQDN_APP_8080
+      - DATABASE_URL=postgres://${SERVICE_USER_POSTGRES:-trustworthy}:${SERVICE_PASSWORD_POSTGRES:-change-me-locally}@db:5432/${POSTGRES_DB:-trustworthy}?sslmode=disable
+      - BASE_URL=${SERVICE_FQDN_APP:-}
+      # Behind Coolify's Traefik, trust X-Forwarded-For/Proto (used only for rate limiting and secure cookies).
+      - TRUST_PROXY=${TRUST_PROXY:-true}
+      - DEFAULT_RETENTION_DAYS=${DEFAULT_RETENTION_DAYS:-730}
+      # Optional: create the owner from env instead of the setup screen.
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - COUNTRY_HEADER=${COUNTRY_HEADER:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    ports:
+      - "${PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/trustworthy", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${SERVICE_USER_POSTGRES:-trustworthy}
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_POSTGRES:-change-me-locally}
+      - POSTGRES_DB=${POSTGRES_DB:-trustworthy}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  pgdata:

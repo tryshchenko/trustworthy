@@ -1,0 +1,9 @@
+node_modules
+dist
+storybook-static
+coverage
+test-results
+playwright-report
+*.tsbuildinfo
+.DS_Store
+.vite

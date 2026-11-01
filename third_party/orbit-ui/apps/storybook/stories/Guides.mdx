@@ -1,0 +1,32 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+
+<Meta title="Guides/Accessibility & performance" />
+
+# Accessibility
+
+Orbit targets **WCAG 2.2 AA**. Accessibility is a release requirement, verified in three layers:
+
+1. **Token tests** — `@orbit/tokens` asserts AA contrast for every text token on every surface, _including translucent glass composited over each theme's real backdrop colours_.
+2. **Component tests** — Vitest + Testing Library + axe-core on rendered components; Storybook play functions exercise keyboard flows.
+3. **End-to-end** — Playwright + `@axe-core/playwright` scan the running demo in all four themes.
+
+### Built-in behaviour
+
+| Concern       | How Orbit handles it                                                                                                                                               |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Focus         | 2px outline token, visible in every theme and in Windows forced-colours mode                                                                                       |
+| Overlays      | Focus trapped in modal dialogs, restored on close; Escape dismisses                                                                                                |
+| Inspector     | Docked, **non-modal** on desktop (focus moves in, not trapped); full-screen modal on mobile                                                                        |
+| Drag-and-drop | Keyboard dragging (Space / arrows / Space, Esc cancels) with live announcements, plus a non-drag "Move to…" menu and status selector (WCAG 2.5.7)                  |
+| Status        | Text + distinct glyph shape + colour — never colour alone                                                                                                          |
+| Forms         | `Field` links label, description and error (`aria-describedby`, `aria-invalid`, `role="alert"`)                                                                    |
+| Motion        | `prefers-reduced-motion` and `data-orbit-motion="reduced"` zero all duration tokens                                                                                |
+| Transparency  | `prefers-reduced-transparency`, `data-orbit-transparency="reduced"` and the Accessible theme make glass opaque; unsupported `backdrop-filter` falls back to opaque |
+| Targets       | Minimum 24×24px pointer targets in compact density                                                                                                                 |
+
+# Performance
+
+- **Blur budget**: at most ~4 blurred surfaces on screen (sidebar, header, inspector, one overlay). Cards, columns and table rows are opaque.
+- **Background**: one static layer of radial gradients + inline SVG — no images, no animation, `contain: strict`.
+- **Rendering**: `IssueCard` and sortable items are memoised; Kanban columns paginate (`pageSize`, default 60); `BacklogList` and `DataGrid` virtualise rows.
+- **Motion**: transitions animate `transform`/`opacity`/colour only; never `backdrop-filter` or layout.
