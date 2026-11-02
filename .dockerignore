@@ -4,8 +4,5 @@
 internal/web/dist/*
 .git
 **/.DS_Store
-third_party/orbit-ui/apps
-third_party/orbit-ui/docs/images
-third_party/orbit-ui/**/*.png
 *.log
 .env

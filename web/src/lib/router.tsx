@@ -22,7 +22,7 @@ export function navigate(to: string, opts: { replace?: boolean } = {}) {
   if (opts.replace) window.history.replaceState(null, "", to);
   else window.history.pushState(null, "", to);
   notify();
-  if (!opts.replace) document.getElementById("orb-main")?.scrollTo?.({ top: 0 });
+  if (!opts.replace) window.scrollTo({ top: 0 });
 }
 
 export function useLocation() {

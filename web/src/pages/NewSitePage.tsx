@@ -1,11 +1,10 @@
-import { ArrowRight, Cookie, Fingerprint, Globe, Server } from "@orbit/icons";
-import { AeroButton, Button, GlassPanel } from "@orbit/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { api, ApiError, type Site, type SiteInput } from "../lib/api";
 import { keys } from "../lib/queries";
 import { navigate } from "../lib/router";
-import { SiteFields, siteColors } from "./SiteSettingsPage";
+import { Button, Icon } from "../ui";
+import { SiteFields } from "./SiteSettingsPage";
 
 function browserZone() {
   try {
@@ -17,12 +16,11 @@ function browserZone() {
 
 export function NewSitePage({ first }: { first: boolean }) {
   const qc = useQueryClient();
-  const [form, setForm] = useState<SiteInput>({ domain: "", name: "", timezone: browserZone(), color: siteColors[0] });
+  const [form, setForm] = useState<SiteInput>({ domain: "", name: "", timezone: browserZone() });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
+  const submit = async () => {
     setBusy(true);
     setError(null);
     try {
@@ -37,48 +35,54 @@ export function NewSitePage({ first }: { first: boolean }) {
   };
 
   return (
-    <div className="tw-page max-w-3xl! pt-2 sm:pt-6">
-      <div className="px-1">
-        <p className="orb-type-overline m-0 text-accent-fg">{first ? "Welcome to Trustworthy" : "New website"}</p>
-        <h1 className="orb-type-page-title m-0 mt-1">{first ? "Let's add your first website" : "Add a website"}</h1>
-        <p className="m-0 mt-1 text-fg-muted">You'll get a tracking snippet next. It takes about a minute.</p>
+    <>
+      <div className="page-head">
+        <p className="eyebrow">{first ? "Welcome" : "New website"}</p>
+        <h1 className="display">{first ? "Add your first website" : "Add a website"}</h1>
+        <p className="lede">You'll get a tracking snippet next. It takes about a minute.</p>
       </div>
 
-      <GlassPanel variant="solid" elevation="raised" padding="lg" radius="xl" border="hairline">
-        <form onSubmit={submit} className="flex flex-col gap-5" noValidate>
+      <section className="split">
+        <header>
+          <h2 className="h3">Website</h2>
+          <p>Only pages on this domain and its subdomains can send data.</p>
+        </header>
+        <form
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submit();
+          }}
+        >
           <SiteFields value={form} onChange={setForm} errors={error ? { domain: error } : undefined} />
-          <div className="flex items-center justify-end gap-2">
+          <div className="form-actions">
             {!first && (
-              <Button variant="ghost" onClick={() => history.back()}>
+              <Button variant="quiet" onClick={() => history.back()}>
                 Cancel
               </Button>
             )}
-            <AeroButton type="submit" size="lg" loading={busy} disabled={!form.domain.trim()} trailingIcon={<ArrowRight size={16} />} leadingIcon={<Globe size={16} />}>
-              Add website
-            </AeroButton>
+            <Button type="submit" variant="primary" busy={busy} disabled={!form.domain.trim()}>
+              Add website <Icon name="arrow-right" />
+            </Button>
           </div>
         </form>
-      </GlassPanel>
+      </section>
 
       {first && (
-        <div className="grid gap-3 sm:grid-cols-3">
+        <ol className="numbered numbered--3 section-gap">
           {[
-            { icon: <Cookie size={18} />, title: "No cookies, no storage", text: "Nothing is written to visitors' devices." },
-            { icon: <Fingerprint size={18} />, title: "No identifiers", text: "Visits can't be linked to people or each other." },
-            { icon: <Server size={18} />, title: "Your server only", text: "No third parties, no telemetry, no external calls." },
-          ].map((f) => (
-            <div key={f.title} className="flex gap-3 rounded-xl border border-line bg-surface p-4">
-              <span className="tw-glyph" style={{ width: 32, height: 32, color: "var(--orb-color-accent-text)", background: "var(--orb-color-accent-soft)" }} aria-hidden>
-                {f.icon}
-              </span>
-              <div>
-                <p className="m-0 text-sm font-semibold">{f.title}</p>
-                <p className="m-0 text-sm text-fg-muted">{f.text}</p>
-              </div>
-            </div>
+            ["No cookies, no storage", "Nothing is written to visitors' devices."],
+            ["No identifiers", "Visits can't be linked to people or to each other."],
+            ["Your server only", "No third parties, no telemetry, no external calls."],
+          ].map(([title, text], i) => (
+            <li key={title}>
+              <span className="n">0{i + 1}</span>
+              <h3 className="h3">{title}</h3>
+              <p>{text}</p>
+            </li>
           ))}
-        </div>
+        </ol>
       )}
-    </div>
+    </>
   );
 }

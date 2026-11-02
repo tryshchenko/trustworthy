@@ -1,32 +1,10 @@
-import { Download, RotateCcw, Trash2 } from "@orbit/icons";
-import {
-  AeroButton,
-  Button,
-  Combobox,
-  DatePicker,
-  Dialog,
-  DialogBody,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Field,
-  Input,
-  Panel,
-  Select,
-  toast,
-  type ListOption,
-} from "@orbit/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState } from "react";
 import { api, ApiError, type Site, type SiteInput } from "../lib/api";
 import { addDays, todayIn } from "../lib/period";
 import { keys } from "../lib/queries";
 import { navigate } from "../lib/router";
-import { SiteHeader } from "./OverviewPage";
-
-export const siteColors = ["#1A78E6", "#12B8AE", "#7C5CE6", "#E8833A", "#D6457A", "#2F9E5B", "#0EA5C6", "#B5651D"];
+import { Button, ButtonLink, Dialog, Field, Icon, toast } from "../ui";
 
 export const retentionOptions = [
   { value: "30", label: "30 days" },
@@ -38,7 +16,8 @@ export const retentionOptions = [
   { value: "0", label: "Keep forever" },
 ];
 
-export function useTimeZoneOptions(): ListOption[] {
+/** Time zones grouped by region for a native <select>. */
+function useTimeZones(): [string, string[]][] {
   return useMemo(() => {
     let zones: string[] = [];
     try {
@@ -46,50 +25,48 @@ export function useTimeZoneOptions(): ListOption[] {
     } catch {
       zones = [];
     }
-    if (!zones.includes("UTC")) zones = ["UTC", ...zones];
-    return zones.map((z) => {
-      const [region] = z.split("/");
-      return { value: z, label: z.replace(/_/g, " "), group: z.includes("/") ? region : "Other", keywords: [z] };
-    });
+    const groups = new Map<string, string[]>([["Other", ["UTC"]]]);
+    for (const z of zones) {
+      if (z === "UTC") continue;
+      const region = z.includes("/") ? z.split("/")[0]! : "Other";
+      groups.set(region, [...(groups.get(region) ?? []), z]);
+    }
+    return [...groups.entries()].sort(([a], [b]) => (a === "Other" ? 1 : b === "Other" ? -1 : a.localeCompare(b)));
   }, []);
 }
 
-export function SiteFields({
-  value,
-  onChange,
-  errors,
-}: {
-  value: SiteInput;
-  onChange: (v: SiteInput) => void;
-  errors?: Partial<Record<keyof SiteInput, string>>;
-}) {
-  const zones = useTimeZoneOptions();
+export function SiteFields({ value, onChange, errors }: { value: SiteInput; onChange: (v: SiteInput) => void; errors?: Partial<Record<keyof SiteInput, string>> }) {
+  const zones = useTimeZones();
+  const known = zones.some(([, zs]) => zs.includes(value.timezone));
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <Field label="Domain" required description="Without https:// — subdomains are counted too." error={errors?.domain}>
-        <Input value={value.domain} onChange={(e) => onChange({ ...value, domain: e.target.value })} placeholder="example.com" spellCheck={false} autoCapitalize="off" />
+    <div className="form-grid">
+      <Field label="Domain" hint="Without https:// — subdomains are counted too." error={errors?.domain}>
+        <input
+          className="input"
+          value={value.domain}
+          onChange={(e) => onChange({ ...value, domain: e.target.value })}
+          placeholder="example.com"
+          spellCheck={false}
+          autoCapitalize="off"
+          autoFocus={!value.domain}
+        />
       </Field>
-      <Field label="Display name" description="Shown in the dashboard only.">
-        <Input value={value.name} onChange={(e) => onChange({ ...value, name: e.target.value })} placeholder={value.domain || "My website"} />
+      <Field label="Display name" hint="Shown in the dashboard only.">
+        <input className="input" value={value.name} onChange={(e) => onChange({ ...value, name: e.target.value })} placeholder={value.domain || "My website"} />
       </Field>
-      <Field label="Reporting time zone" description="Days and hours in reports follow this zone." error={errors?.timezone}>
-        <Combobox options={zones} value={value.timezone} onValueChange={(v) => v && onChange({ ...value, timezone: v })} searchPlaceholder="Search time zones…" />
-      </Field>
-      <Field label="Colour">
-        <div role="radiogroup" aria-label="Site colour" className="flex flex-wrap items-center gap-2 pt-1">
-          {siteColors.map((c) => (
-            <button
-              key={c}
-              type="button"
-              role="radio"
-              aria-checked={value.color?.toUpperCase() === c}
-              aria-label={c}
-              className="tw-swatch"
-              style={{ background: c }}
-              onClick={() => onChange({ ...value, color: c })}
-            />
+      <Field label="Reporting time zone" hint="Days and hours in reports follow this zone." error={errors?.timezone}>
+        <select className="select" value={value.timezone} onChange={(e) => onChange({ ...value, timezone: e.target.value })}>
+          {!known && <option value={value.timezone}>{value.timezone.replace(/_/g, " ")}</option>}
+          {zones.map(([region, zs]) => (
+            <optgroup key={region} label={region}>
+              {zs.map((z) => (
+                <option key={z} value={z}>
+                  {z.replace(/_/g, " ")}
+                </option>
+              ))}
+            </optgroup>
           ))}
-        </div>
+        </select>
       </Field>
     </div>
   );
@@ -97,7 +74,8 @@ export function SiteFields({
 
 export function SiteSettingsPage({ site }: { site: Site }) {
   const qc = useQueryClient();
-  const [form, setForm] = useState<SiteInput>({ domain: site.domain, name: site.name, timezone: site.timezone, color: site.color, retentionDays: site.retentionDays });
+  const initial = { domain: site.domain, name: site.name, timezone: site.timezone };
+  const [form, setForm] = useState<SiteInput>(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const today = todayIn(site.timezone);
@@ -106,16 +84,16 @@ export function SiteSettingsPage({ site }: { site: Site }) {
   const [confirm, setConfirm] = useState<"reset" | "delete" | null>(null);
   const [typed, setTyped] = useState("");
 
-  const dirty = form.domain !== site.domain || form.name !== site.name || form.timezone !== site.timezone || form.color !== site.color;
+  const dirty = form.domain !== site.domain || form.name !== site.name || form.timezone !== site.timezone;
 
   const save = async (patch: Partial<SiteInput> = {}) => {
     setBusy(true);
     setError(null);
     try {
-      await api.put<Site>(`/api/sites/${site.id}`, { ...form, ...patch });
+      await api.put<Site>(`/api/sites/${site.id}`, { ...form, retentionDays: site.retentionDays, ...patch });
       await qc.invalidateQueries({ queryKey: keys.sites });
       await qc.invalidateQueries({ predicate: (q) => q.queryKey[1] === site.id });
-      toast({ title: "Settings saved", tone: "success" });
+      toast("Settings saved");
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Couldn't save settings");
     } finally {
@@ -127,139 +105,143 @@ export function SiteSettingsPage({ site }: { site: Site }) {
     try {
       if (confirm === "delete") {
         await api.del(`/api/sites/${site.id}`);
-        toast({ title: `${site.domain} deleted`, tone: "success" });
+        toast(`${site.domain} deleted`);
         await qc.invalidateQueries({ queryKey: keys.sites });
         navigate("/", { replace: true });
       } else {
         await api.post(`/api/sites/${site.id}/reset`);
-        toast({ title: "Statistics reset", tone: "success" });
+        toast("Statistics reset");
         await qc.invalidateQueries();
       }
     } catch (e) {
-      toast({ title: "Something went wrong", description: (e as Error).message, tone: "danger" });
+      toast("Something went wrong", { detail: (e as Error).message, tone: "danger" });
     }
     setConfirm(null);
     setTyped("");
   };
 
+  const close = () => {
+    setConfirm(null);
+    setTyped("");
+  };
+
   return (
-    <div className="tw-page">
-      <SiteHeader site={site} title="Site settings" />
-      <div className="grid gap-4">
-        <Panel title="General">
-          <form
-            onSubmit={(e: FormEvent) => {
-              e.preventDefault();
-              void save();
-            }}
-            className="flex flex-col gap-4"
-          >
-            <SiteFields value={form} onChange={setForm} errors={error ? { domain: error } : undefined} />
-            <div className="flex justify-end gap-2">
-              {dirty && (
-                <Button variant="ghost" onClick={() => setForm({ domain: site.domain, name: site.name, timezone: site.timezone, color: site.color, retentionDays: site.retentionDays })}>
-                  Discard
-                </Button>
-              )}
-              <AeroButton type="submit" loading={busy} disabled={!dirty}>
-                Save changes
-              </AeroButton>
-            </div>
-          </form>
-        </Panel>
-
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Panel title="Data retention" description="Older statistics are deleted automatically every few hours.">
-            <Field label="Keep statistics for">
-              <Select
-                value={String(site.retentionDays)}
-                options={retentionOptions}
-                onValueChange={(v) => {
-                  setForm((f) => ({ ...f, retentionDays: Number(v) }));
-                  void save({ retentionDays: Number(v) });
-                }}
-              />
-            </Field>
-            <p className="mb-0 mt-3 text-sm text-fg-muted">Only anonymous hourly totals are stored, so a long retention holds no personal data. Shorter periods keep the database small.</p>
-          </Panel>
-
-          <Panel title="Export data" description="Daily aggregates for every dimension, as CSV.">
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="From">
-                <DatePicker value={exportFrom} max={exportTo} onValueChange={setExportFrom} />
-              </Field>
-              <Field label="To">
-                <DatePicker value={exportTo} min={exportFrom} max={today} onValueChange={setExportTo} />
-              </Field>
-            </div>
-            <Button asChild variant="secondary" className="mt-4" leadingIcon={<Download size={15} />}>
-              <a href={`/api/sites/${site.id}/export?from=${exportFrom}&to=${exportTo}`} download>
-                Download CSV
-              </a>
+    <>
+      <section className="split">
+        <header>
+          <h2 className="h3">General</h2>
+          <p>The domain decides which pages may send data. Other hosts are rejected.</p>
+        </header>
+        <form
+          noValidate
+          onSubmit={(e) => {
+            e.preventDefault();
+            void save();
+          }}
+        >
+          <SiteFields value={form} onChange={setForm} errors={error ? { domain: error } : undefined} />
+          <div className="form-actions">
+            {dirty && (
+              <Button variant="quiet" onClick={() => setForm(initial)}>
+                Discard
+              </Button>
+            )}
+            <Button type="submit" variant="primary" busy={busy} disabled={!dirty}>
+              Save changes
             </Button>
-          </Panel>
-        </div>
-
-        <Panel title="Danger zone" className="!border-[var(--orb-color-danger-border)]">
-          <div className="flex flex-col divide-y divide-[var(--orb-color-border-subtle)]">
-            <div className="flex flex-wrap items-center justify-between gap-3 pb-4">
-              <div>
-                <p className="m-0 font-medium">Reset statistics</p>
-                <p className="m-0 text-sm text-fg-muted">Delete all collected data for {site.domain}. Settings and goals are kept.</p>
-              </div>
-              <Button variant="secondary" leadingIcon={<RotateCcw size={15} />} onClick={() => setConfirm("reset")}>
-                Reset statistics
-              </Button>
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-4">
-              <div>
-                <p className="m-0 font-medium">Delete website</p>
-                <p className="m-0 text-sm text-fg-muted">Permanently remove this site, its goals and all its statistics.</p>
-              </div>
-              <Button variant="danger" leadingIcon={<Trash2 size={15} />} onClick={() => setConfirm("delete")}>
-                Delete website
-              </Button>
-            </div>
           </div>
-        </Panel>
-      </div>
+        </form>
+      </section>
+
+      <section className="split">
+        <header>
+          <h2 className="h3">Data retention</h2>
+          <p>Older statistics are deleted automatically every few hours.</p>
+        </header>
+        <div className="stack" style={{ gap: "1rem", maxWidth: "26rem" }}>
+          <Field label="Keep statistics for">
+            <select className="select" value={String(site.retentionDays)} onChange={(e) => void save({ retentionDays: Number(e.target.value) })}>
+              {retentionOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <p className="small muted">Only anonymous hourly totals are stored, so a long retention holds no personal data. Shorter periods keep the database small.</p>
+        </div>
+      </section>
+
+      <section className="split">
+        <header>
+          <h2 className="h3">Export</h2>
+          <p>Daily aggregates for every dimension, as CSV.</p>
+        </header>
+        <div className="row-flex" style={{ alignItems: "flex-end", gap: "1rem" }}>
+          <Field label="From">
+            <input className="input" type="date" value={exportFrom} max={exportTo} onChange={(e) => setExportFrom(e.target.value)} />
+          </Field>
+          <Field label="To">
+            <input className="input" type="date" value={exportTo} min={exportFrom} max={today} onChange={(e) => setExportTo(e.target.value)} />
+          </Field>
+          <ButtonLink href={`/api/sites/${site.id}/export?from=${exportFrom}&to=${exportTo}`} download style={{ minHeight: 46 }}>
+            <Icon name="download" /> Download CSV
+          </ButtonLink>
+        </div>
+      </section>
+
+      <section className="split split--danger">
+        <header>
+          <h2 className="h3">Danger zone</h2>
+          <p>These can't be undone.</p>
+        </header>
+        <div className="stack">
+          <div className="row-flex" style={{ justifyContent: "space-between", paddingBottom: "1.25rem", borderBottom: "1px solid var(--line-soft)" }}>
+            <div>
+              <p style={{ fontWeight: 500 }}>Reset statistics</p>
+              <p className="small muted">Delete all collected data for {site.domain}. Settings and goals are kept.</p>
+            </div>
+            <Button onClick={() => setConfirm("reset")}>Reset statistics</Button>
+          </div>
+          <div className="row-flex" style={{ justifyContent: "space-between", paddingTop: "1.25rem" }}>
+            <div>
+              <p style={{ fontWeight: 500 }}>Delete website</p>
+              <p className="small muted">Permanently remove this site, its goals and all its statistics.</p>
+            </div>
+            <Button variant="danger" onClick={() => setConfirm("delete")}>
+              Delete website
+            </Button>
+          </div>
+        </div>
+      </section>
 
       <Dialog
         open={!!confirm}
-        onOpenChange={(o) => {
-          if (!o) {
-            setConfirm(null);
-            setTyped("");
-          }
-        }}
+        onClose={close}
+        onSubmit={() => typed.trim().toLowerCase() === site.domain && void destroy()}
+        title={confirm === "delete" ? `Delete ${site.domain}?` : "Reset all statistics?"}
+        description="This can't be undone. Export your data first if you might need it."
+        footer={
+          <>
+            <Button variant="quiet" onClick={close}>
+              Cancel
+            </Button>
+            <Button variant="danger" type="submit" disabled={typed.trim().toLowerCase() !== site.domain}>
+              {confirm === "delete" ? "Delete website" : "Reset statistics"}
+            </Button>
+          </>
+        }
       >
-        <DialogContent size="sm">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (typed.trim().toLowerCase() === site.domain) void destroy();
-            }}
-          >
-            <DialogHeader>
-              <DialogTitle>{confirm === "delete" ? `Delete ${site.domain}?` : "Reset all statistics?"}</DialogTitle>
-              <DialogDescription>This can't be undone. Export your data first if you might need it.</DialogDescription>
-            </DialogHeader>
-            <DialogBody>
-              <Field label={<>Type <b>{site.domain}</b> to confirm</>}>
-                <Input value={typed} onChange={(e) => setTyped(e.target.value)} autoFocus spellCheck={false} autoCapitalize="off" />
-              </Field>
-            </DialogBody>
-            <DialogFooter>
-              <Button variant="ghost" type="button" onClick={() => setConfirm(null)}>
-                Cancel
-              </Button>
-              <Button variant="danger" type="submit" disabled={typed.trim().toLowerCase() !== site.domain}>
-                {confirm === "delete" ? "Delete website" : "Reset statistics"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
+        <Field
+          label={
+            <>
+              Type <span style={{ color: "var(--ink)", textTransform: "none", letterSpacing: 0 }}>{site.domain}</span> to confirm
+            </>
+          }
+        >
+          <input className="input" value={typed} onChange={(e) => setTyped(e.target.value)} autoFocus spellCheck={false} autoCapitalize="off" />
+        </Field>
       </Dialog>
-    </div>
+    </>
   );
 }

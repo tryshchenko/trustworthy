@@ -7,17 +7,15 @@
     "node": ">=20.19"
   },
   "scripts": {
-    "build:tokens": "pnpm --filter @orbit/tokens build",
-    "build": "pnpm build:tokens && pnpm --filter @trustworthy/web build",
-    "dev": "pnpm build:tokens && pnpm --filter @trustworthy/web dev",
-    "typecheck": "pnpm build:tokens && pnpm --filter @trustworthy/web typecheck",
+    "build": "pnpm --filter @trustworthy/web build",
+    "dev": "pnpm --filter @trustworthy/web dev",
+    "typecheck": "pnpm --filter @trustworthy/web typecheck",
     "test": "pnpm --filter @trustworthy/web test"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "typescript": "~5.9.3",
-    "vitest": "^3.2.7"
+    "typescript": "~5.9.3"
   }
 }

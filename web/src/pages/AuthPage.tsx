@@ -1,10 +1,8 @@
-import { Eye, EyeOff, KeyRound, ShieldCheck } from "@orbit/icons";
-import { AeroBackground, AeroButton, Field, GlassPanel, IconButton, Input } from "@orbit/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
-import { BrandMark } from "../components/Brand";
+import { useState } from "react";
 import { api, ApiError } from "../lib/api";
 import { keys } from "../lib/queries";
+import { Button, Field } from "../ui";
 
 type Mode = "login" | "setup" | "error";
 
@@ -17,8 +15,7 @@ export function AuthPage({ mode, error: loadError }: { mode: Mode; error?: strin
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
+  const submit = async () => {
     setBusy(true);
     setError(null);
     try {
@@ -33,103 +30,125 @@ export function AuthPage({ mode, error: loadError }: { mode: Mode; error?: strin
   };
 
   return (
-    <div className="tw-auth">
-      <AeroBackground />
-      <main className="tw-auth__card">
-        <div className="mb-6 flex flex-col items-center gap-3 text-center" style={{ color: "#EEF6FC" }}>
-          <BrandMark size={52} />
-          <div>
-            <h1 className="m-0 text-2xl font-semibold tracking-tight">Trustworthy</h1>
-            <p className="m-0 mt-1 text-sm" style={{ color: "#B6CDE0" }}>
-              Privacy-first analytics. No cookies, no tracking of people.
-            </p>
-          </div>
+    <div className="auth">
+      <header className="site-header">
+        <div className="container nav-wrap">
+          <span className="wordmark">Trustworthy</span>
+          <span className="eyebrow" style={{ marginLeft: "auto" }}>
+            Self-hosted analytics
+          </span>
+        </div>
+      </header>
+      <main id="main" className="container auth__main">
+        <div>
+          <p className="eyebrow" style={{ marginBottom: "1.5rem" }}>
+            No cookies · No identifiers · No third parties
+          </p>
+          <h1 className="auth__title">Pages, not people.</h1>
+          <p className="auth__copy">
+            Know which pages are read and where readers come from — without following anyone around. Everything stays on this server.
+          </p>
         </div>
 
-        <GlassPanel variant="raised" elevation="floating" padding="lg" radius="2xl">
-          {mode === "error" ? (
-            <div className="flex flex-col gap-2">
-              <h2 className="orb-type-section-title m-0">Can't reach the server</h2>
-              <p className="m-0 text-sm text-fg-muted">{loadError ?? "Please check that the service is running."}</p>
-              <AeroButton className="mt-3" onClick={() => void qc.invalidateQueries()}>
-                Try again
-              </AeroButton>
+        {mode === "error" ? (
+          <div className="auth__form">
+            <h2 className="h2">Can't reach the server</h2>
+            <p className="muted">{loadError ?? "Please check that the service is running."}</p>
+            <Button variant="primary" onClick={() => void qc.invalidateQueries()}>
+              Try again
+            </Button>
+          </div>
+        ) : (
+          <form
+            className="auth__form"
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault();
+              void submit();
+            }}
+          >
+            <div>
+              <h2 className="h2">{mode === "setup" ? "Create the owner account" : "Sign in"}</h2>
+              <p className="muted small" style={{ marginTop: "0.4rem" }}>
+                {mode === "setup" ? "This installation has one owner. You'll use these details to sign in." : "Welcome back."}
+              </p>
             </div>
-          ) : (
-            <form className="flex flex-col gap-4" onSubmit={submit} noValidate>
-              <div>
-                <h2 className="orb-type-section-title m-0">{mode === "setup" ? "Create your owner account" : "Welcome back"}</h2>
-                <p className="m-0 mt-1 text-sm text-fg-muted">
-                  {mode === "setup"
-                    ? "This installation has one owner. You'll use these details to sign in."
-                    : "Sign in to see your websites."}
-                </p>
-              </div>
-              {mode === "setup" && (
-                <Field
-                  label="Setup code"
-                  required
-                  description={
-                    <>
-                      Printed in the server logs on first start (in Coolify: your application → <b>Logs</b>). Look for{" "}
-                      <span className="tw-inline-code">setup_code</span>.
-                    </>
-                  }
-                >
-                  <Input
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    placeholder="XXXX-XXXX-XXXX"
-                    autoComplete="one-time-code"
-                    leading={<KeyRound size={16} />}
-                    autoFocus
-                    spellCheck={false}
-                    style={{ fontFamily: "var(--orb-font-mono)", letterSpacing: "0.06em" }}
-                  />
-                </Field>
-              )}
-              <Field label="Email" required>
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete={mode === "setup" ? "email" : "username"}
-                  autoFocus={mode === "login"}
+            {mode === "setup" && (
+              <Field
+                label="Setup code"
+                required
+                hint={
+                  <>
+                    Printed in the server logs on first start (in Coolify: your application → Logs). Look for <span className="code-inline">setup_code</span>.
+                  </>
+                }
+              >
+                <input
+                  className="input input--mono"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  placeholder="XXXX-XXXX-XXXX"
+                  autoComplete="one-time-code"
+                  autoFocus
+                  spellCheck={false}
                 />
               </Field>
-              <Field label="Password" required description={mode === "setup" ? "At least 10 characters. A passphrase works well." : undefined}>
-                <Input
-                  type={show ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete={mode === "setup" ? "new-password" : "current-password"}
-                  trailing={
-                    <IconButton
-                      size="sm"
-                      variant="ghost"
-                      label={show ? "Hide password" : "Show password"}
-                      icon={show ? <EyeOff size={16} /> : <Eye size={16} />}
-                      onClick={() => setShow((s) => !s)}
-                      tooltip={false}
-                    />
-                  }
-                />
-              </Field>
-              {error && (
-                <p role="alert" className="m-0 rounded-md px-3 py-2 text-sm" style={{ background: "var(--orb-color-danger-bg)", color: "var(--orb-color-danger-fg)" }}>
-                  {error}
-                </p>
-              )}
-              <AeroButton type="submit" size="lg" loading={busy} fullWidth>
-                {mode === "setup" ? "Create account" : "Sign in"}
-              </AeroButton>
-            </form>
-          )}
-        </GlassPanel>
-        <p className="mt-5 flex items-center justify-center gap-1.5 text-xs" style={{ color: "#A2BCD2" }}>
-          <ShieldCheck size={14} aria-hidden /> Self-hosted. Your data never leaves this server.
-        </p>
+            )}
+            <Field label="Email" required>
+              <input
+                className="input"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete={mode === "setup" ? "email" : "username"}
+                autoFocus={mode === "login"}
+              />
+            </Field>
+            <Field label="Password" required hint={mode === "setup" ? "At least 10 characters. A passphrase works well." : undefined}>
+              <PasswordInput value={password} onChange={setPassword} show={show} onShow={setShow} autoComplete={mode === "setup" ? "new-password" : "current-password"} />
+            </Field>
+            {error && (
+              <p role="alert" className="alert">
+                {error}
+              </p>
+            )}
+            <Button type="submit" variant="primary" busy={busy}>
+              {mode === "setup" ? "Create account" : "Sign in"}
+            </Button>
+          </form>
+        )}
       </main>
+      <footer className="auth__foot">
+        <div className="container">This installation sets no cookies on the sites it measures — only a session cookie here, for you.</div>
+      </footer>
     </div>
+  );
+}
+
+function PasswordInput({
+  value,
+  onChange,
+  show,
+  onShow,
+  autoComplete,
+  ...aria
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  show: boolean;
+  onShow: (v: boolean) => void;
+  autoComplete: string;
+  id?: string;
+  required?: boolean;
+  "aria-describedby"?: string;
+  "aria-invalid"?: boolean;
+}) {
+  return (
+    <span className="input-wrap">
+      <input className="input" type={show ? "text" : "password"} value={value} onChange={(e) => onChange(e.target.value)} autoComplete={autoComplete} {...aria} />
+      <Button variant="quiet" size="sm" onClick={() => onShow(!show)} aria-label={show ? "Hide password" : "Show password"}>
+        {show ? "Hide" : "Show"}
+      </Button>
+    </span>
   );
 }

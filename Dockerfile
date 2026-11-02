@@ -7,11 +7,7 @@ WORKDIR /src
 RUN npm install -g pnpm@10.18.3
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY web/package.json web/
-COPY third_party/orbit-ui/packages/tokens/package.json third_party/orbit-ui/packages/tokens/
-COPY third_party/orbit-ui/packages/icons/package.json third_party/orbit-ui/packages/icons/
-COPY third_party/orbit-ui/packages/ui/package.json third_party/orbit-ui/packages/ui/
 RUN pnpm install --frozen-lockfile
-COPY third_party/orbit-ui third_party/orbit-ui
 COPY web web
 RUN mkdir -p internal/web && pnpm build
 

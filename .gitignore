@@ -1,5 +1,4 @@
 node_modules/
-third_party/orbit-ui/packages/*/dist/
 # The dashboard build output is embedded into the Go binary; only the placeholder is tracked.
 internal/web/dist/*
 !internal/web/dist/.gitkeep

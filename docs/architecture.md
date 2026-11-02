@@ -49,9 +49,9 @@ Granularity follows the length of the range: 2 days or less is hourly, 93 days o
 ## Dashboard
 
 - React 19, Vite, TanStack Query and a small History API router. URL search parameters hold the period, comparison, metric and filters, so every view can be shared and bookmarked.
-- [Orbit UI](../third_party/orbit-ui/FORK.md) is vendored and compiled from source through the `orbit-source` export condition. Only the tokens package is pre-built.
-- **Aero Scenic** is the fixed theme: dark glass chrome with a bright content window. Reduced transparency and reduced motion are respected, both from OS settings and from the Account page.
-- Charts are custom SVG. Each has a crosshair and tooltip, arrow-key navigation, and a table view. While a query refreshes, the previous frame stays on screen at lower opacity instead of a loading flash. Chart colours passed a colour-vision-deficiency validation against the content surface.
+- No component library and no CSS framework. `web/src/styles.css` is the whole design system (paper, ink, hairlines, one blue, Archivo in normal and condensed widths) and `web/src/ui.tsx` holds a dozen primitives built on native elements: `<dialog>`, `<select>`, checkboxes and date inputs.
+- The visual language follows watch dials: the chart baseline carries a tick per bucket, the live view draws a 30-minute track, and the loading indicator is a sweeping hand. Reduced motion is respected.
+- Charts are custom SVG with a single series in blue and the comparison as a dashed grey line, so identity never depends on colour alone. Each chart has a crosshair and tooltip, arrow-key navigation and a table view. While a query refreshes, the previous frame stays on screen at lower opacity instead of a loading flash.
 
 ## Deliberate limits
 

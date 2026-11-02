@@ -1,76 +1,59 @@
-import { Info } from "@orbit/icons";
-import { EmptyState, Panel, Skeleton } from "@orbit/ui";
 import { useState } from "react";
 import { BarList } from "../components/Breakdown";
 import type { Realtime, Site } from "../lib/api";
 import { compact, number } from "../lib/format";
 import { useRealtime } from "../lib/queries";
 import { navigate } from "../lib/router";
-import { SiteHeader } from "./OverviewPage";
+import { Empty, Skeleton } from "../ui";
 
-function MinuteBars({ minutes }: { minutes: Realtime["minutes"] }) {
+/** Thirty bars on a baseline — the minute track of a dial. The current minute is blue. */
+function MinuteTrack({ minutes }: { minutes: Realtime["minutes"] }) {
   const [active, setActive] = useState<number | null>(null);
   const max = Math.max(1, ...minutes.map((m) => m.pageviews));
-  const H = 160;
   const n = minutes.length;
   const ago = (i: number) => n - 1 - i;
   const a = active != null ? minutes[active] : undefined;
   return (
-    <div className="relative">
+    <div className="track">
       <div
-        className="grid items-end gap-[2px]"
-        style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))`, height: H }}
+        className="track__bars"
+        style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}
         role="list"
         aria-label="Pageviews per minute, last 30 minutes"
         onPointerLeave={() => setActive(null)}
       >
-        {minutes.map((m, i) => {
-          const h = m.pageviews ? Math.max(4, (m.pageviews / max) * H) : 2;
-          return (
-            <div
-              key={m.time}
-              role="listitem"
-              tabIndex={0}
-              aria-label={`${ago(i) === 0 ? "This minute" : `${ago(i)} minutes ago`}: ${m.pageviews} pageviews`}
-              className="group flex h-full items-end justify-center focus-visible:outline-none"
-              onPointerEnter={() => setActive(i)}
-              onFocus={() => setActive(i)}
-              onBlur={() => setActive(null)}
-            >
-              <div
-                className="w-full max-w-[24px] transition-[height,filter] duration-300 group-focus-visible:ring-2 group-focus-visible:ring-[var(--orb-color-border-focus)]"
-                style={{
-                  height: h,
-                  borderRadius: "4px 4px 0 0",
-                  background: m.pageviews ? "var(--tw-series-pageviews)" : "var(--orb-color-border-subtle)",
-                  filter: active === i ? "brightness(1.15)" : undefined,
-                  opacity: active != null && active !== i ? 0.55 : 1,
-                }}
-              />
-            </div>
-          );
-        })}
+        {minutes.map((m, i) => (
+          <div
+            key={m.time}
+            role="listitem"
+            tabIndex={0}
+            className="track__bar"
+            data-now={ago(i) === 0 || undefined}
+            data-zero={m.pageviews === 0 || undefined}
+            aria-label={`${ago(i) === 0 ? "This minute" : `${ago(i)} minutes ago`}: ${m.pageviews} pageviews`}
+            onPointerEnter={() => setActive(i)}
+            onFocus={() => setActive(i)}
+            onBlur={() => setActive(null)}
+          >
+            <span style={{ height: `${(m.pageviews / max) * 100}%` }} />
+          </div>
+        ))}
       </div>
-      <div className="mt-2 flex justify-between text-xs text-fg-subtle tabular" aria-hidden>
-        <span>30 min ago</span>
-        <span>15 min ago</span>
+      <div className="track__scale label" aria-hidden>
+        <span>−30 min</span>
+        <span>−15</span>
         <span>Now</span>
       </div>
       {a && active != null && (
-        <div
-          className="tw-tooltip"
-          style={{ transform: `translate(clamp(0px, calc(${(active / n) * 100}% - 80px), calc(100% - 180px)), -8px)`, left: 0, width: 168 }}
-        >
-          <div className="tw-tooltip__title">{ago(active) === 0 ? "This minute" : `${ago(active)} min ago`}</div>
-          <div className="tw-tooltip__row">
-            <span className="tw-linekey" style={{ ["--tw-key" as string]: "var(--tw-series-pageviews)" }} />
+        <div className="tooltip" style={{ left: `clamp(0px, calc(${((active + 0.5) / n) * 100}% - 85px), calc(100% - 170px))` }}>
+          <div className="tooltip__title label">{ago(active) === 0 ? "This minute" : `${ago(active)} min ago`}</div>
+          <div className="tooltip__row">
             <strong>{number(a.pageviews)}</strong>
-            <span>Pageviews</span>
+            <span>pageviews</span>
           </div>
-          <div className="tw-tooltip__row">
-            <span className="tw-linekey" style={{ ["--tw-key" as string]: "var(--tw-series-visits)" }} />
+          <div className="tooltip__row">
             <strong>{number(a.visits)}</strong>
-            <span>Visits</span>
+            <span>visits</span>
           </div>
         </div>
       )}
@@ -81,53 +64,51 @@ function MinuteBars({ minutes }: { minutes: Realtime["minutes"] }) {
 export function LivePage({ site }: { site: Site }) {
   const rt = useRealtime(site.id, 5_000);
   const d = rt.data;
-  const toOverview = (dim: string, value: string) =>
-    navigate(`/sites/${site.id}?period=today&filter=${encodeURIComponent(`${dim}:${value}`)}`);
+  const toOverview = (dim: string, value: string) => navigate(`/sites/${site.id}?period=today&filter=${encodeURIComponent(`${dim}:${value}`)}`);
 
   return (
-    <div className="tw-page">
-      <SiteHeader site={site} title={`Live · ${site.name}`} />
-
-      <Panel
-        title={
-          <span className="inline-flex items-center gap-2">
-            <span className="tw-live-dot" data-idle={d && d.pageviews === 0 ? "" : undefined} aria-hidden /> Last 30 minutes
-          </span>
-        }
-        description="Updates every few seconds"
-      >
-        {!d ? (
-          <Skeleton height={220} radius="md" />
-        ) : (
-          <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
-            <div className="flex flex-col gap-5">
-              <div>
-                <div className="font-semibold tracking-tight" style={{ fontSize: 56, lineHeight: 1 }} aria-live="polite">
-                  {compact(d.pageviews)}
-                </div>
-                <div className="mt-1.5 text-sm text-fg-muted">pageviews in the last 30 minutes</div>
-              </div>
-              <dl className="m-0 grid grid-cols-3 gap-3 lg:grid-cols-1">
-                {[
-                  ["Last 5 minutes", d.pageviewsLast5, "pageviews"],
-                  ["Visits", d.visits, "arrivals from outside"],
-                  ["Events", d.events, "custom events"],
-                ].map(([label, value, hint]) => (
-                  <div key={label as string} className="rounded-lg border border-line bg-sunken px-3 py-2">
-                    <dt className="text-xs font-medium text-fg-muted">{label}</dt>
-                    <dd className="m-0 text-xl font-semibold tabular">{compact(value as number)}</dd>
-                    <dd className="m-0 text-xs text-fg-subtle max-lg:hidden">{hint}</dd>
+    <>
+      <section className="live-hero" aria-label="Last 30 minutes">
+        <div>
+          <p className="eyebrow live" style={{ marginBottom: "1.25rem" }}>
+            <span className="live__dot" data-idle={d && d.pageviews === 0 ? "" : undefined} aria-hidden />
+            Last 30 minutes
+          </p>
+          {d ? (
+            <>
+              <p className="live-number" aria-live="polite">
+                {compact(d.pageviews)}
+              </p>
+              <p className="muted" style={{ marginTop: "0.75rem" }}>
+                pageviews · updates every 5 seconds
+              </p>
+              <dl className="live-stats">
+                {(
+                  [
+                    ["Last 5 min", d.pageviewsLast5],
+                    ["Visits", d.visits],
+                    ["Events", d.events],
+                  ] as const
+                ).map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="label">{label}</dt>
+                    <dd>{compact(value)}</dd>
                   </div>
                 ))}
               </dl>
-            </div>
-            <MinuteBars minutes={d.minutes} />
-          </div>
-        )}
-      </Panel>
+            </>
+          ) : (
+            <Skeleton height={120} width="70%" />
+          )}
+        </div>
+        {d ? <MinuteTrack minutes={d.minutes} /> : <Skeleton height={220} />}
+      </section>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title="Pages right now">
+      <div className="grid-2">
+        <section aria-label="Pages right now">
+          <header className="block__head">
+            <h2 className="h3">Pages right now</h2>
+          </header>
           {d && d.topPages.length > 0 ? (
             <BarList
               rows={d.topPages.map((p) => ({ value: p.label, pageviews: p.count, visits: 0, events: 0 }))}
@@ -139,10 +120,13 @@ export function LivePage({ site }: { site: Site }) {
               onFilter={(f) => toOverview(f.dim, f.value)}
             />
           ) : (
-            <EmptyState size="sm" title="Quiet right now" description="Pages appear here as soon as someone visits." />
+            <Empty title="Quiet right now">Pages appear here as soon as someone visits.</Empty>
           )}
-        </Panel>
-        <Panel title="Arriving from">
+        </section>
+        <section aria-label="Arriving from">
+          <header className="block__head">
+            <h2 className="h3">Arriving from</h2>
+          </header>
           {d && d.topSources.length > 0 ? (
             <BarList
               rows={d.topSources.map((p) => ({ value: p.label, pageviews: 0, visits: p.count, events: 0 }))}
@@ -154,16 +138,15 @@ export function LivePage({ site }: { site: Site }) {
               onFilter={(f) => toOverview(/\./.test(f.value) ? "referrer" : "channel", f.value)}
             />
           ) : (
-            <EmptyState size="sm" title="No new arrivals" description="Referrers and channels of new visits show up here." />
+            <Empty title="No new arrivals">Referrers and channels of new visits show up here.</Empty>
           )}
-        </Panel>
+        </section>
       </div>
 
-      <p className="m-0 flex items-start gap-2 px-1 text-sm text-fg-muted">
-        <Info size={16} className="mt-0.5 flex-none" aria-hidden />
-        Live figures count activity, not people online — counting people would require tracking them. They are held in memory for 30 minutes
-        only and reset when the server restarts.
+      <p className="small muted" style={{ maxWidth: "44rem", marginTop: "1.5rem" }}>
+        Live figures count activity, not people online — counting people would require tracking them. They are held in memory for 30 minutes and reset when
+        the server restarts.
       </p>
-    </div>
+    </>
   );
 }

@@ -1,7 +1,6 @@
-import { CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight } from "@orbit/icons";
-import { Button, DatePicker, IconButton, Popover, PopoverContent, PopoverTrigger, Select } from "@orbit/ui";
 import { useState } from "react";
 import { addDays, daysBetween, presets, periodLabel, type CompareMode, type DashboardState, type PeriodId } from "../lib/period";
+import { Button, Icon, Popover } from "../ui";
 
 interface Props {
   state: DashboardState;
@@ -9,7 +8,7 @@ interface Props {
   onChange: (next: { period: PeriodId; from?: string; to?: string }) => void;
 }
 
-/** Date-range control: presets as rows, custom range tucked behind a hairline. */
+/** Date range: presets as a list, a custom range below a rule, and stepping arrows. */
 export function PeriodPicker({ state, today, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const [from, setFrom] = useState(state.from);
@@ -27,7 +26,7 @@ export function PeriodPicker({ state, today, onChange }: Props) {
   };
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="toolbar__group">
       <Popover
         open={open}
         onOpenChange={(o) => {
@@ -37,73 +36,67 @@ export function PeriodPicker({ state, today, onChange }: Props) {
             setTo(state.to);
           }
         }}
-      >
-        <PopoverTrigger asChild>
-          <Button leadingIcon={<CalendarDays size={16} />} trailingIcon={<ChevronDown size={14} />} aria-label={`Date range: ${periodLabel(state)}`}>
-            <span className="max-w-[16ch] truncate sm:max-w-none">{periodLabel(state)}</span>
+        trigger={(p) => (
+          <Button {...p} aria-label={`Date range: ${periodLabel(state)}`} style={{ minWidth: 170, justifyContent: "space-between" }}>
+            {periodLabel(state)}
+            <Icon name="chevron-down" />
           </Button>
-        </PopoverTrigger>
-        <PopoverContent align="start" padding="none" className="w-[280px]">
-          <ul role="listbox" aria-label="Date range presets" className="m-0 list-none p-1.5">
-            {presets.map((p) => {
-              const selected = state.period === p.id;
-              return (
-                <li key={p.id} role="option" aria-selected={selected}>
-                  <button
-                    type="button"
-                    className="flex h-9 w-full items-center gap-2 rounded-md px-2.5 text-left text-sm hover:bg-[var(--orb-color-surface-hover)] focus-visible:bg-[var(--orb-color-surface-hover)] focus-visible:outline-none"
-                    onClick={() => {
-                      onChange({ period: p.id });
-                      setOpen(false);
-                    }}
-                  >
-                    <span className="grid w-4 place-items-center text-accent-fg">{selected && <Check size={16} strokeWidth={3} />}</span>
-                    <span className={selected ? "font-semibold" : ""}>{p.label}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-          <form
-            className="flex flex-col gap-2 border-t border-line p-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (from && to && from <= to) {
-                onChange({ period: "custom", from, to });
-                setOpen(false);
-              }
-            }}
-          >
-            <span className="orb-type-overline text-fg-subtle">Custom range</span>
-            <div className="grid grid-cols-2 gap-2">
-              <DatePicker aria-label="From" value={from} max={today} onValueChange={(v) => setFrom(v)} size="sm" format={{ month: "short", day: "numeric", year: "2-digit" }} />
-              <DatePicker aria-label="To" value={to} min={from} max={today} onValueChange={(v) => setTo(v)} size="sm" format={{ month: "short", day: "numeric", year: "2-digit" }} />
-            </div>
-            <Button type="submit" size="sm" variant="primary" disabled={!from || !to || from > to}>
-              Apply range
-            </Button>
-          </form>
-        </PopoverContent>
+        )}
+      >
+        <ul className="menu" role="listbox" aria-label="Date range presets">
+          {presets.map((p) => (
+            <li key={p.id} role="option" aria-selected={state.period === p.id}>
+              <button
+                type="button"
+                className="menu__item"
+                aria-selected={state.period === p.id}
+                onClick={() => {
+                  onChange({ period: p.id });
+                  setOpen(false);
+                }}
+              >
+                <span className="menu__check">{state.period === p.id && <Icon name="check" />}</span>
+                {p.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+        <form
+          className="menu__form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (from && to && from <= to) {
+              onChange({ period: "custom", from, to });
+              setOpen(false);
+            }
+          }}
+        >
+          <span className="label">Custom range</span>
+          <div className="row-2">
+            <input className="input" type="date" aria-label="From" value={from} max={to || today} onChange={(e) => setFrom(e.target.value)} />
+            <input className="input" type="date" aria-label="To" value={to} min={from} max={today} onChange={(e) => setTo(e.target.value)} />
+          </div>
+          <Button type="submit" variant="primary" size="sm" disabled={!from || !to || from > to}>
+            Apply range
+          </Button>
+        </form>
       </Popover>
-      <IconButton label="Previous period" icon={<ChevronLeft size={16} />} variant="ghost" onClick={() => shift(-1)} />
-      <IconButton label="Next period" icon={<ChevronRight size={16} />} variant="ghost" onClick={() => shift(1)} disabled={state.to >= today} />
+      <Button icon aria-label="Previous period" title="Previous period" onClick={() => shift(-1)}>
+        <Icon name="chevron-left" />
+      </Button>
+      <Button icon aria-label="Next period" title="Next period" onClick={() => shift(1)} disabled={state.to >= today}>
+        <Icon name="chevron-right" />
+      </Button>
     </div>
   );
 }
 
 export function CompareSelect({ value, onChange }: { value: CompareMode; onChange: (v: CompareMode) => void }) {
   return (
-    <div className="w-[186px] flex-none">
-    <Select
-      aria-label="Compare to"
-      value={value}
-      onValueChange={(v) => onChange(v as CompareMode)}
-      options={[
-        { value: "previous", label: "vs previous period" },
-        { value: "year", label: "vs last year" },
-        { value: "none", label: "No comparison" },
-      ]}
-    />
-    </div>
+    <select className="select select--compact" aria-label="Compare to" value={value} onChange={(e) => onChange(e.target.value as CompareMode)}>
+      <option value="previous">vs previous period</option>
+      <option value="year">vs last year</option>
+      <option value="none">No comparison</option>
+    </select>
   );
 }

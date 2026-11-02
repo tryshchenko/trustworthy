@@ -1,7 +1,6 @@
-import { Spinner, Toaster } from "@orbit/ui";
 import { useEffect } from "react";
 import { Shell } from "./components/Shell";
-import { navigate, matchPath, useLocation } from "./lib/router";
+import { matchPath, navigate, useLocation } from "./lib/router";
 import { useSession, useSites } from "./lib/queries";
 import { AccountPage } from "./pages/AccountPage";
 import { AuthPage } from "./pages/AuthPage";
@@ -13,23 +12,23 @@ import { NotFound } from "./pages/NotFound";
 import { OverviewPage } from "./pages/OverviewPage";
 import { PrivacyPage } from "./pages/PrivacyPage";
 import { SiteSettingsPage } from "./pages/SiteSettingsPage";
+import { Dial, Toaster } from "./ui";
 
 export type SiteView = "overview" | "live" | "goals" | "install" | "settings";
+const views = new Set<SiteView>(["overview", "live", "goals", "install", "settings"]);
 
-function FullscreenSpinner() {
+function Loading() {
   return (
-    <div className="grid h-full place-items-center" style={{ background: "#0A2846" }}>
-      <Spinner size="lg" label="Loading Trustworthy" />
+    <div className="fullscreen">
+      <Dial large label="Loading Trustworthy" />
     </div>
   );
 }
 
 export function App() {
   const session = useSession();
-  if (session.isPending) return <FullscreenSpinner />;
-  if (session.isError || !session.data) {
-    return <AuthPage mode="error" error={session.error?.message} />;
-  }
+  if (session.isPending) return <Loading />;
+  if (session.isError || !session.data) return <AuthPage mode="error" error={session.error?.message} />;
   if (session.data.setupRequired) return <AuthPage mode="setup" />;
   if (!session.data.authenticated) return <AuthPage mode="login" />;
   return (
@@ -45,11 +44,9 @@ function AuthedApp({ email, baseUrl, version }: { email: string; baseUrl?: strin
   const sites = useSites();
   const list = sites.data ?? [];
 
-  const siteMatch =
-    matchPath("/sites/:id", pathname) ?? matchPath("/sites/:id/:view", pathname);
-  const siteId = siteMatch ? Number(siteMatch.id) : null;
-  const site = siteId != null ? list.find((s) => s.id === siteId) : undefined;
-  const view = (siteMatch?.view ?? "overview") as SiteView;
+  const m = matchPath("/sites/:id", pathname) ?? matchPath("/sites/:id/:view", pathname);
+  const site = m ? list.find((s) => s.id === Number(m.id)) : undefined;
+  const view = (m?.view ?? "overview") as SiteView;
 
   // "/" goes to the first site, or onboarding when there are none.
   useEffect(() => {
@@ -58,37 +55,31 @@ function AuthedApp({ email, baseUrl, version }: { email: string; baseUrl?: strin
     navigate(first ? `/sites/${first.id}` : "/new", { replace: true });
   }, [sites.data, pathname]);
 
-  if (sites.isPending) return <FullscreenSpinner />;
+  useEffect(() => {
+    const section = site ? `${view === "overview" ? "" : `${view[0]!.toUpperCase()}${view.slice(1)} · `}${site.name}` : pathname.slice(1);
+    document.title = section ? `${section} — Trustworthy` : "Trustworthy";
+  }, [site, view, pathname]);
 
-  let content: React.ReactNode;
+  if (sites.isPending) return <Loading />;
+
+  let content: React.ReactNode = null;
+  let siteView: SiteView | null = null;
   if (pathname === "/new") content = <NewSitePage first={list.length === 0} />;
   else if (pathname === "/account") content = <AccountPage email={email} version={version} />;
   else if (pathname === "/privacy") content = <PrivacyPage />;
-  else if (site) {
-    switch (view) {
-      case "overview":
-        content = <OverviewPage key={site.id} site={site} />;
-        break;
-      case "live":
-        content = <LivePage site={site} />;
-        break;
-      case "goals":
-        content = <GoalsPage key={site.id} site={site} />;
-        break;
-      case "install":
-        content = <InstallPage site={site} baseUrl={baseUrl} />;
-        break;
-      case "settings":
-        content = <SiteSettingsPage key={site.id} site={site} />;
-        break;
-      default:
-        content = <NotFound />;
-    }
-  } else if (pathname === "/") content = null;
-  else content = <NotFound />;
+  else if (site && views.has(view)) {
+    siteView = view;
+    content = {
+      overview: <OverviewPage key={site.id} site={site} />,
+      live: <LivePage site={site} />,
+      goals: <GoalsPage key={site.id} site={site} />,
+      install: <InstallPage site={site} baseUrl={baseUrl} />,
+      settings: <SiteSettingsPage key={site.id} site={site} />,
+    }[view];
+  } else if (pathname !== "/") content = <NotFound />;
 
   return (
-    <Shell sites={list} site={site} view={site ? view : null} pathname={pathname} email={email}>
+    <Shell sites={list} site={siteView ? site : undefined} view={siteView} pathname={pathname} email={email}>
       {content}
     </Shell>
   );

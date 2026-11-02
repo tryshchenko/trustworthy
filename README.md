@@ -26,7 +26,7 @@ Most analytics tools follow people around. Trustworthy measures **pages, not peo
 - 🧮 **Aggregates only.** Hits are folded into hourly counters in memory. Individual requests are never written to disk.
 - 🧹 **Cleaned twice.** The browser strips query strings and fragments, and the server redacts e-mail addresses, IDs and tokens from paths and campaign tags.
 - 🏠 **Self-hosted and independent.** You get one ~14 MB binary and PostgreSQL. Nothing calls home: no telemetry, CDNs or third-party services.
-- ✨ **A dashboard worth opening.** It's built on the Aero Scenic theme of the [Orbit UI](third_party/orbit-ui/FORK.md) design system: frosted-glass chrome, a calm content window and readable charts.
+- ✍️ **A quiet, deliberate interface.** Paper, ink, hairline rules and one blue: a German-minimal dashboard where typography does the work. No component library, no CSS framework, about 30 KB of app code gzipped.
 
 > Trustworthy is designed so that most sites can measure traffic without a consent banner. **Compliance is never automatic**, though. Read the [privacy model and legal assumptions](docs/privacy.md) before you rely on that.
 
@@ -62,7 +62,7 @@ Most analytics tools follow people around. Trustworthy measures **pages, not peo
 <p align="center">
   <img src="docs/screenshots/mobile.png" alt="Dashboard on a phone" width="260" />
   &nbsp;&nbsp;
-  <img src="docs/screenshots/login.png" alt="Sign-in screen over the Aero Scenic background" width="540" />
+  <img src="docs/screenshots/login.png" alt="Sign-in screen: Pages, not people." width="540" />
 </p>
 
 ## Features
@@ -74,10 +74,10 @@ Most analytics tools follow people around. Trustworthy measures **pages, not peo
 | **Audience** | Country (estimated from the time zone, with no IP lookup), device class, browser and OS. |
 | **Goals** | Event goals and page goals with `*` wildcards. Shows completions, conversion rate and change. |
 | **Live** | Per-minute activity for the last 30 minutes. A header pill shows the count for the last 5 minutes. |
-| **Multi-site** | Unlimited websites per installation, with a site switcher, a command palette (<kbd>⌘K</kbd>), per-site time zones and per-site retention. |
+| **Multi-site** | Unlimited websites per installation, with a site switcher, per-site time zones and per-site retention. |
 | **Data ownership** | CSV export, configurable retention (30 days to forever), and buttons to reset statistics or delete a site. |
 | **Operations** | Automatic migrations, `/healthz` and `/readyz`, graceful shutdown with a final flush, and env-only configuration. A distroless, non-root image. |
-| **Accessibility** | Keyboard-navigable charts with table views, reduced-motion and reduced-transparency support, and colour-vision-safe chart colours. |
+| **Accessibility** | Keyboard-navigable charts with table views, native form controls and dialogs, reduced-motion support, and charts that never rely on colour alone. |
 
 ## Quick start
 
@@ -178,7 +178,7 @@ browser ─ script.js ─▶ POST /api/event ─▶ sanitise & classify (in memo
 ```
 
 - **Backend:** Go standard library HTTP with pgx. Hourly aggregates are keyed by `(site, hour, dimensions)`, so any filter combines with any breakdown in plain SQL.
-- **Frontend:** React 19, Vite, TanStack Query and Orbit UI, with hand-built SVG charts. It is compiled into the binary with `go:embed`.
+- **Frontend:** React 19, Vite and TanStack Query, with one hand-written stylesheet, a dozen small primitives over native elements and hand-built SVG charts. It is compiled into the binary with `go:embed`.
 - **Security:** a single owner account with bcrypt passwords and hashed session tokens. The first run requires a setup code from the logs. There's CSRF and Origin checking, a strict CSP, and rate-limited login and collection.
 
 Read [docs/architecture.md](docs/architecture.md) for the data model and the trade-offs.
@@ -232,12 +232,11 @@ internal/stats         query layer and CSV export
 internal/server        HTTP API, collection endpoint, middleware, SPA
 internal/…             config, auth, geo, migrations, tracker script, embedded web build
 web/                   React dashboard
-third_party/orbit-ui   vendored Orbit UI design system
 docs/                  Coolify deployment, privacy model, architecture
 ```
 
 ## Credits
 
-The interface is built with **[Orbit UI](https://github.com/tryshchenko/orbit-ui)**, a Frutiger-Aero-inspired design system vendored in [`third_party/orbit-ui`](third_party/orbit-ui/FORK.md). Product inspiration comes from the privacy-friendly analytics movement, including Simple Analytics, Plausible and Fathom.
+The interface follows the design language of [tryshchenko.com](https://tryshchenko.com): German minimalism after Nomos Glashütte watch dials. It is set in [Archivo](https://github.com/Omnibus-Type/Archivo) (SIL Open Font License 1.1), bundled in `web/src/fonts`. Product inspiration comes from the privacy-friendly analytics movement, including Simple Analytics, Plausible and Fathom.
 
 <sub>Trustworthy is provided as-is. The privacy documentation is an engineering assessment, not legal advice. Check your setup with your data-protection officer or counsel.</sub>

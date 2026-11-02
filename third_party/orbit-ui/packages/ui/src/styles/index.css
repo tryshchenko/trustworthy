@@ -1,9 +1,0 @@
-/* @orbit/ui — component styles. Requires @orbit/tokens/tokens.css. */
-@import "./base.css";
-@import "./materials.css";
-@import "./controls.css";
-@import "./overlays.css";
-@import "./display.css";
-@import "./aero.css";
-@import "./product.css";
-@import "./scenic.css";

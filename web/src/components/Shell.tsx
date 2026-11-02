@@ -1,65 +1,18 @@
-import {
-  Activity,
-  Code2,
-  Globe,
-  LayoutDashboard,
-  LogOut,
-  Plus,
-  Settings2,
-  ShieldCheck,
-  Target,
-  UserRound,
-} from "@orbit/icons";
-import {
-  AeroBackground,
-  AeroButton,
-  AeroHeader,
-  AeroSidebar,
-  AppShell,
-  Avatar,
-  CommandPalette,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  HeaderSearch,
-  ProjectSwitcher,
-  SidebarItem,
-  SidebarSection,
-  Tooltip,
-  useHotkey,
-  type CommandItem,
-  type ProjectSummary,
-} from "@orbit/ui";
 import { useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { SiteView } from "../App";
 import { api, type Site } from "../lib/api";
-import { compact as fmtCompact } from "../lib/format";
+import { compact, timeAgo } from "../lib/format";
 import { useRealtime } from "../lib/queries";
-import { Link, navigate, onLinkClick } from "../lib/router";
-import { Brand } from "./Brand";
+import { Link, navigate } from "../lib/router";
+import { Icon, Popover } from "../ui";
 
-export function siteKey(s: Site): string {
-  const base = s.name.replace(/[^\p{L}\p{N} ]/gu, " ").trim() || s.domain;
-  const words = base.split(/\s+/);
-  return (words.length > 1 ? words[0]![0]! + words[1]![0]! : base.slice(0, 2)).toUpperCase();
-}
-
-export function toProject(s: Site): ProjectSummary {
-  return { id: String(s.id), name: s.name, key: siteKey(s), color: s.color, description: s.domain };
-}
-
-const siteNav: { view: SiteView; label: string; icon: ReactNode; path: string }[] = [
-  { view: "overview", label: "Overview", icon: <LayoutDashboard size={18} />, path: "" },
-  { view: "live", label: "Live", icon: <Activity size={18} />, path: "/live" },
-  { view: "goals", label: "Goals & events", icon: <Target size={18} />, path: "/goals" },
-];
-const setupNav: typeof siteNav = [
-  { view: "install", label: "Tracking code", icon: <Code2 size={18} />, path: "/install" },
-  { view: "settings", label: "Site settings", icon: <Settings2 size={18} />, path: "/settings" },
+const siteNav: { view: SiteView; label: string; path: string }[] = [
+  { view: "overview", label: "Overview", path: "" },
+  { view: "live", label: "Live", path: "/live" },
+  { view: "goals", label: "Goals", path: "/goals" },
+  { view: "install", label: "Tracking code", path: "/install" },
+  { view: "settings", label: "Settings", path: "/settings" },
 ];
 
 interface ShellProps {
@@ -72,187 +25,148 @@ interface ShellProps {
 }
 
 export function Shell({ sites, site, view, pathname, email, children }: ShellProps) {
-  const [drawer, setDrawer] = useState(false);
-  const [compact, setCompact] = useState(false);
-  const [palette, setPalette] = useState(false);
+  const [menu, setMenu] = useState(false);
+  // Close the mobile menu on navigation.
+  useEffect(() => setMenu(false), [pathname]);
   const lastSite = useRef<Site | undefined>(undefined);
   if (site) lastSite.current = site;
-  // Keep site navigation meaningful on account/privacy pages.
-  const navSite = site ?? (lastSite.current && sites.find((s) => s.id === lastSite.current!.id)) ?? sites[0];
-
-  useHotkey("mod+k", () => setPalette((o) => !o), { allowInInputs: true });
-  useHotkey("[", () => setCompact((c) => !c));
-
-  const go = (href: string) => (e: React.MouseEvent<HTMLAnchorElement>) => onLinkClick(e, href);
-
-  const sidebar = (
-    <AeroSidebar
-      compact={compact}
-      onCompactChange={setCompact}
-      label="Main navigation"
-      header={
-        navSite ? (
-          <ProjectSwitcher
-            compact={compact}
-            projects={sites.map(toProject)}
-            value={String(navSite.id)}
-            onValueChange={(id) => {
-              setDrawer(false);
-              navigate(`/sites/${id}${view && view !== "overview" ? `/${view}` : ""}`);
-            }}
-            onCreateProject={() => {
-              setDrawer(false);
-              navigate("/new");
-            }}
-          />
-        ) : (
-          <div className="px-2 py-1.5">
-            <Brand />
-          </div>
-        )
-      }
-      footer={
-        <>
-          <SidebarItem href="/privacy" onClick={go("/privacy")} icon={<ShieldCheck size={18} />} active={pathname === "/privacy"}>
-            Privacy & data
-          </SidebarItem>
-          <SidebarItem href="/account" onClick={go("/account")} icon={<UserRound size={18} />} active={pathname === "/account"}>
-            Account
-          </SidebarItem>
-        </>
-      }
-    >
-      {navSite ? (
-        <>
-          <SidebarSection title="Analytics">
-            {siteNav.map((n) => {
-              const href = `/sites/${navSite.id}${n.path}`;
-              return (
-                <SidebarItem
-                  key={n.view}
-                  href={href}
-                  onClick={go(href)}
-                  icon={n.icon}
-                  active={!!site && view === n.view}
-                  badge={n.view === "live" ? <LiveBadge siteId={navSite.id} /> : undefined}
-                >
-                  {n.label}
-                </SidebarItem>
-              );
-            })}
-          </SidebarSection>
-          <SidebarSection title="Setup">
-            {setupNav.map((n) => {
-              const href = `/sites/${navSite.id}${n.path}`;
-              return (
-                <SidebarItem key={n.view} href={href} onClick={go(href)} icon={n.icon} active={!!site && view === n.view}>
-                  {n.label}
-                </SidebarItem>
-              );
-            })}
-          </SidebarSection>
-          {sites.length > 1 && (
-            <SidebarSection title="Websites" collapsible defaultOpen={sites.length <= 6}>
-              {sites.map((s) => {
-                const href = `/sites/${s.id}`;
-                return (
-                  <SidebarItem
-                    key={s.id}
-                    href={href}
-                    onClick={go(href)}
-                    icon={
-                      <span
-                        className="orb-project-icon"
-                        style={{ width: 18, height: 18, fontSize: 8, borderRadius: 5, ["--orb-project-color" as string]: s.color }}
-                      >
-                        {siteKey(s).slice(0, 1)}
-                      </span>
-                    }
-                    active={site?.id === s.id && view === "overview"}
-                  >
-                    {s.name}
-                  </SidebarItem>
-                );
-              })}
-            </SidebarSection>
-          )}
-        </>
-      ) : (
-        <SidebarSection title="Get started">
-          <SidebarItem href="/new" onClick={go("/new")} icon={<Globe size={18} />} active={pathname === "/new"}>
-            Add a website
-          </SidebarItem>
-        </SidebarSection>
-      )}
-    </AeroSidebar>
-  );
-
-  const header = (
-    <AeroHeader
-      onMenuClick={() => setDrawer(true)}
-      logo={
-        <Link href="/" aria-label="Trustworthy home" className="tw-brand">
-          <Brand />
-        </Link>
-      }
-      search={<HeaderSearch placeholder="Jump to a site or view…" onClick={() => setPalette(true)} />}
-      actions={
-        <>
-          {navSite && <LivePill site={navSite} />}
-          <AeroButton leadingIcon={<Plus size={16} />} onClick={() => navigate("/new")} className="max-sm:!px-2.5">
-            <span className="max-sm:sr-only">Add website</span>
-          </AeroButton>
-          <AccountMenu email={email} />
-        </>
-      }
-    />
-  );
+  const liveSite = site ?? sites.find((s) => s.id === lastSite.current?.id) ?? sites[0];
 
   return (
     <>
-      <AppShell
-        background={<AeroBackground />}
-        sidebar={sidebar}
-        header={header}
-        sidebarOpen={drawer}
-        onSidebarOpenChange={setDrawer}
-      >
+      <a className="skip-link" href="#main">
+        Skip to content
+      </a>
+      <header className="site-header">
+        <div className="container nav-wrap">
+          <Link className="wordmark" href="/" aria-label="Trustworthy, home">
+            Trustworthy
+          </Link>
+          <button type="button" className="menu-button" aria-expanded={menu} aria-controls="site-nav" onClick={() => setMenu((m) => !m)}>
+            {menu ? "Close" : "Menu"}
+          </button>
+          <nav id="site-nav" className="nav" aria-label="Primary" data-open={menu || undefined}>
+            {liveSite && <LiveCount site={liveSite} />}
+            {sites.length > 0 && <SiteSwitcher sites={sites} current={site} view={view} />}
+            <Link href="/new" aria-current={pathname === "/new" ? "page" : undefined}>
+              Add site
+            </Link>
+            <Link href="/privacy" aria-current={pathname === "/privacy" ? "page" : undefined}>
+              Privacy
+            </Link>
+            <span className="nav__sep" aria-hidden />
+            <AccountMenu email={email} active={pathname === "/account"} />
+          </nav>
+        </div>
+      </header>
+      <main id="main" className="container page">
+        {site && view && <SiteHead site={site} view={view} />}
         {children}
-      </AppShell>
-      <Palette open={palette} onOpenChange={setPalette} sites={sites} site={navSite} />
+      </main>
     </>
   );
 }
 
-function LiveBadge({ siteId }: { siteId: number }) {
-  const rt = useRealtime(siteId, 30_000);
-  const n = rt.data?.pageviewsLast5 ?? 0;
-  if (!n) return null;
+function SiteHead({ site, view }: { site: Site; view: SiteView }) {
+  const recent = site.lastHitAt && Date.now() - new Date(site.lastHitAt).getTime() < 5 * 60_000;
+  const rt = useRealtime(site.id, 30_000);
+  const live = rt.data?.pageviewsLast5 ?? 0;
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <span className="tw-live-dot" aria-hidden />
-      <span className="tabular">{fmtCompact(n)}</span>
-      <span className="orb-sr-only"> pageviews in the last 5 minutes</span>
-    </span>
+    <>
+      <div className="page-head">
+        <p className="eyebrow">
+          <a href={`https://${site.domain}`} target="_blank" rel="noreferrer noopener" className="live" style={{ gap: "0.3rem" }}>
+            {site.domain}
+            <Icon name="arrow-up-right" />
+          </a>
+          <span className="live">
+            <span className="live__dot" data-idle={recent ? undefined : ""} aria-hidden />
+            {site.lastHitAt ? `Last activity ${timeAgo(site.lastHitAt)}` : "No data yet"}
+          </span>
+        </p>
+        <h1 className="display">{site.name}</h1>
+      </div>
+      <nav className="subnav" aria-label={`${site.name} sections`}>
+        {siteNav.map((n) => (
+          <Link key={n.view} href={`/sites/${site.id}${n.path}`} aria-current={view === n.view ? "page" : undefined}>
+            {n.label}
+            {n.view === "live" && live > 0 && (
+              <span className="count">
+                {compact(live)}
+                <span className="sr-only"> pageviews in the last 5 minutes</span>
+              </span>
+            )}
+          </Link>
+        ))}
+      </nav>
+    </>
   );
 }
 
-function LivePill({ site }: { site: Site }) {
+function LiveCount({ site }: { site: Site }) {
   const rt = useRealtime(site.id, 15_000);
   const n = rt.data?.pageviewsLast5 ?? 0;
-  const href = `/sites/${site.id}/live`;
   return (
-    <Tooltip content={`${n.toLocaleString()} pageviews on ${site.domain} in the last 5 minutes`}>
-      <Link href={href} className="tw-live-pill max-md:!hidden" aria-label={`Live: ${n} pageviews in the last 5 minutes`}>
-        <span className="tw-live-dot" data-idle={n === 0 ? "" : undefined} aria-hidden />
-        <span className="tabular font-medium">{fmtCompact(n)}</span>
-        <span className="text-fg-muted">in 5 min</span>
-      </Link>
-    </Tooltip>
+    <Link href={`/sites/${site.id}/live`} className="live" title={`${n.toLocaleString()} pageviews on ${site.domain} in the last 5 minutes`}>
+      <span className="live__dot" data-idle={n === 0 ? "" : undefined} aria-hidden />
+      <span>
+        {compact(n)} <span className="muted">/ 5 min</span>
+      </span>
+    </Link>
   );
 }
 
-function AccountMenu({ email }: { email: string }) {
+function SiteSwitcher({ sites, current, view }: { sites: Site[]; current: Site | undefined; view: SiteView | null }) {
+  const [open, setOpen] = useState(false);
+  const go = (s: Site) => {
+    setOpen(false);
+    navigate(`/sites/${s.id}${view && view !== "overview" ? `/${view}` : ""}`);
+  };
+  return (
+    <Popover
+      open={open}
+      onOpenChange={setOpen}
+      align="end"
+      trigger={(p) => (
+        <button type="button" className="nav-button" {...p}>
+          Sites <span className="muted">{sites.length}</span>
+          <Icon name="chevron-down" />
+        </button>
+      )}
+    >
+      <ul className="menu" aria-label="Websites">
+        {sites.map((s) => (
+          <li key={s.id}>
+            <button type="button" className="menu__item" aria-current={current?.id === s.id ? "true" : undefined} onClick={() => go(s)}>
+              <span className="menu__check">{current?.id === s.id && <Icon name="check" />}</span>
+              <span>{s.name}</span>
+              <span className="menu__meta">{s.name === s.domain ? "" : s.domain}</span>
+            </button>
+          </li>
+        ))}
+        <li className="menu__sep" aria-hidden />
+        <li>
+          <button
+            type="button"
+            className="menu__item"
+            onClick={() => {
+              setOpen(false);
+              navigate("/new");
+            }}
+          >
+            <span className="menu__check">
+              <Icon name="plus" />
+            </span>
+            Add a website
+          </button>
+        </li>
+      </ul>
+    </Popover>
+  );
+}
+
+function AccountMenu({ email, active }: { email: string; active: boolean }) {
+  const [open, setOpen] = useState(false);
   const qc = useQueryClient();
   const signOut = async () => {
     await api.post("/api/logout").catch(() => undefined);
@@ -261,71 +175,37 @@ function AccountMenu({ email }: { email: string }) {
     await qc.invalidateQueries();
   };
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button type="button" className="rounded-full focus-visible:outline-none" aria-label="Account menu">
-          <Avatar name={email || "Owner"} size="sm" decorative />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={8}>
-        <DropdownMenuLabel>{email}</DropdownMenuLabel>
-        <DropdownMenuItem icon={<UserRound size={16} />} onSelect={() => navigate("/account")}>
+    <Popover
+      open={open}
+      onOpenChange={setOpen}
+      align="end"
+      trigger={(p) => (
+        <button type="button" className="nav-button" aria-current={active ? "page" : undefined} {...p}>
           Account
-        </DropdownMenuItem>
-        <DropdownMenuItem icon={<ShieldCheck size={16} />} onSelect={() => navigate("/privacy")}>
-          Privacy & data
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem icon={<LogOut size={16} />} onSelect={() => void signOut()}>
+          <Icon name="chevron-down" />
+        </button>
+      )}
+    >
+      <div className="menu">
+        <p className="menu__head">
+          <span className="label">Signed in as</span>
+          <span className="small">{email}</span>
+        </p>
+        <div className="menu__sep" />
+        <button
+          type="button"
+          className="menu__item"
+          onClick={() => {
+            setOpen(false);
+            navigate("/account");
+          }}
+        >
+          Account settings
+        </button>
+        <button type="button" className="menu__item" onClick={() => void signOut()}>
           Sign out
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </button>
+      </div>
+    </Popover>
   );
-}
-
-function Palette({
-  open,
-  onOpenChange,
-  sites,
-  site,
-}: {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-  sites: Site[];
-  site: Site | undefined;
-}) {
-  const commands = useMemo<CommandItem[]>(() => {
-    const out: CommandItem[] = [];
-    if (site) {
-      for (const n of [...siteNav, ...setupNav]) {
-        out.push({
-          id: `nav-${n.view}`,
-          label: n.label,
-          description: site.name,
-          group: "Go to",
-          icon: n.icon,
-          onSelect: () => navigate(`/sites/${site.id}${n.path}`),
-        });
-      }
-    }
-    for (const s of sites) {
-      out.push({
-        id: `site-${s.id}`,
-        label: s.name,
-        description: s.domain,
-        group: "Websites",
-        keywords: [s.domain],
-        icon: <Globe size={16} />,
-        onSelect: () => navigate(`/sites/${s.id}`),
-      });
-    }
-    out.push(
-      { id: "add", label: "Add a website", group: "Actions", icon: <Plus size={16} />, onSelect: () => navigate("/new") },
-      { id: "privacy", label: "Privacy & data", group: "Actions", icon: <ShieldCheck size={16} />, onSelect: () => navigate("/privacy") },
-      { id: "account", label: "Account settings", group: "Actions", icon: <UserRound size={16} />, onSelect: () => navigate("/account") },
-    );
-    return out;
-  }, [sites, site]);
-  return <CommandPalette open={open} onOpenChange={onOpenChange} commands={commands} placeholder="Jump to a site or view…" />;
 }

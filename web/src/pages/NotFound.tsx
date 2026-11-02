@@ -1,16 +1,14 @@
-import { Compass } from "@orbit/icons";
-import { Button, EmptyState } from "@orbit/ui";
-import { navigate } from "../lib/router";
+import { ButtonLink, Icon } from "../ui";
 
 export function NotFound() {
   return (
-    <div className="grid flex-1 place-items-center">
-      <EmptyState
-        icon={<Compass size={28} />}
-        title="Nothing here"
-        description="This page doesn't exist, or the website was removed."
-        actions={<Button onClick={() => navigate("/")}>Back to dashboard</Button>}
-      />
+    <div className="page-head">
+      <p className="eyebrow">404</p>
+      <h1 className="display">Nothing here</h1>
+      <p className="lede">This page doesn't exist, or the website was removed.</p>
+      <ButtonLink href="/" variant="rule" style={{ marginTop: "2.5rem", minWidth: 220 }}>
+        Back to the dashboard <Icon name="arrow-right" />
+      </ButtonLink>
     </div>
   );
 }

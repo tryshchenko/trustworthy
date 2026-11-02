@@ -34,5 +34,5 @@ docker: ## Build the production image
 	docker build -t trustworthy:latest .
 
 clean:
-	rm -rf trustworthy node_modules web/node_modules third_party/orbit-ui/packages/*/dist
+	rm -rf trustworthy node_modules web/node_modules
 	find internal/web/dist -mindepth 1 ! -name .gitkeep -delete

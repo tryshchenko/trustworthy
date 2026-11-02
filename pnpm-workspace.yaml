@@ -1,9 +1,5 @@
 packages:
   - web
-  - third_party/orbit-ui/packages/tokens
-  - third_party/orbit-ui/packages/icons
-  - third_party/orbit-ui/packages/ui
 
 onlyBuiltDependencies:
   - esbuild
-  - "@tailwindcss/oxide"

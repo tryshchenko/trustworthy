@@ -1,17 +1,14 @@
-import { ArrowRight, Download, ExternalLink, LineChart, Sparkles, Table2, X } from "@orbit/icons";
-import { AeroButton, Button, EmptyState, IconButton, Panel, Skeleton, Tag, Tooltip, toast } from "@orbit/ui";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BreakdownCard } from "../components/Breakdown";
 import { dimLabel, valueLabel, type Dim } from "../components/dimensions";
 import { MetricTiles } from "../components/MetricTiles";
-import { PeriodPicker, CompareSelect } from "../components/PeriodPicker";
+import { CompareSelect, PeriodPicker } from "../components/PeriodPicker";
 import { ChartLegend, ChartTable, TrafficChart, metricName } from "../components/TrafficChart";
-import { siteKey } from "../components/Shell";
 import type { Metric, Site } from "../lib/api";
-import { timeAgo } from "../lib/format";
 import { apiQuery, compareLabel, readState, todayIn, type Filter, type PeriodId } from "../lib/period";
 import { useOverview } from "../lib/queries";
 import { Link, useLocation, useSearchUpdate } from "../lib/router";
+import { Button, ButtonLink, Empty, Icon, Skeleton, toast } from "../ui";
 
 /** Current local wall-clock time in a zone as "YYYY-MM-DDTHH:mm". */
 export function nowKeyIn(timeZone: string): string {
@@ -27,35 +24,6 @@ export function nowKeyIn(timeZone: string): string {
   }
 }
 
-export function SiteHeader({ site, title, actions }: { site: Site; title?: string; actions?: React.ReactNode }) {
-  const live = site.lastHitAt && Date.now() - new Date(site.lastHitAt).getTime() < 5 * 60_000;
-  return (
-    <div className="flex flex-wrap items-start justify-between gap-3 px-1 pt-1">
-      <div className="flex min-w-0 items-center gap-3">
-        <span className="orb-project-icon" style={{ width: 44, height: 44, fontSize: 15, ["--orb-project-color" as string]: site.color }} aria-hidden>
-          {siteKey(site)}
-        </span>
-        <div className="min-w-0">
-          <h1 className="orb-type-page-title m-0 truncate">{title ?? site.name}</h1>
-          <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-fg-muted">
-            <a href={`https://${site.domain}`} target="_blank" rel="noreferrer noopener" className="inline-flex items-center gap-1 hover:text-accent-fg hover:underline">
-              {site.domain}
-              <ExternalLink size={12} aria-hidden />
-            </a>
-            {site.lastHitAt && (
-              <span className="inline-flex items-center gap-1.5">
-                <span className="tw-live-dot" data-idle={live ? undefined : ""} aria-hidden />
-                Last activity {timeAgo(site.lastHitAt)}
-              </span>
-            )}
-          </p>
-        </div>
-      </div>
-      {actions && <div className="flex items-center gap-1.5">{actions}</div>}
-    </div>
-  );
-}
-
 export function useDashboardState(site: Site) {
   const { search } = useLocation();
   const update = useSearchUpdate();
@@ -63,22 +31,28 @@ export function useDashboardState(site: Site) {
   const today = todayIn(site.timezone);
 
   const setPeriod = (p: { period: PeriodId; from?: string; to?: string }) =>
-    update((q) => {
-      q.set("period", p.period);
-      if (p.period === "custom" && p.from && p.to) {
-        q.set("from", p.from);
-        q.set("to", p.to);
-      } else {
-        q.delete("from");
-        q.delete("to");
-      }
-    }, { push: true });
+    update(
+      (q) => {
+        q.set("period", p.period);
+        if (p.period === "custom" && p.from && p.to) {
+          q.set("from", p.from);
+          q.set("to", p.to);
+        } else {
+          q.delete("from");
+          q.delete("to");
+        }
+      },
+      { push: true },
+    );
   const setCompare = (c: string) => update((q) => (c === "previous" ? q.delete("compare") : q.set("compare", c)));
   const addFilter = (f: Filter) =>
-    update((q) => {
-      q.getAll("filter").forEach((v) => v.startsWith(`${f.dim}:`) && q.delete("filter", v));
-      q.append("filter", `${f.dim}:${f.value}`);
-    }, { push: true });
+    update(
+      (q) => {
+        q.getAll("filter").forEach((v) => v.startsWith(`${f.dim}:`) && q.delete("filter", v));
+        q.append("filter", `${f.dim}:${f.value}`);
+      },
+      { push: true },
+    );
   const removeFilter = (f: Filter) => update((q) => q.delete("filter", `${f.dim}:${f.value}`), { push: true });
   const clearFilters = () => update((q) => q.delete("filter"), { push: true });
   return { state, today, search, update, setPeriod, setCompare, addFilter, removeFilter, clearFilters };
@@ -91,38 +65,39 @@ function useStuck() {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const root = document.getElementById("orb-main");
-    const io = new IntersectionObserver(([e]) => setStuck(!e!.isIntersecting), { root, threshold: 0 });
+    const io = new IntersectionObserver(([e]) => setStuck(!e!.isIntersecting), { threshold: 0 });
     io.observe(el);
     return () => io.disconnect();
   }, []);
   return [ref, stuck] as const;
 }
 
-export function Toolbar({ dash }: { dash: ReturnType<typeof useDashboardState> }) {
+export function Toolbar({ dash, actions }: { dash: ReturnType<typeof useDashboardState>; actions?: React.ReactNode }) {
   const { state, today, setPeriod, setCompare, removeFilter, clearFilters } = dash;
   const [sentinel, stuck] = useStuck();
   return (
     <>
-    <div ref={sentinel} aria-hidden className="-mb-4 h-0" />
-    <div className="tw-toolbar flex flex-wrap items-center gap-2" data-stuck={stuck || undefined} role="toolbar" aria-label="Date range and filters">
-      <PeriodPicker state={state} today={today} onChange={setPeriod} />
-      <CompareSelect value={state.compare} onChange={setCompare} />
-      {state.filters.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5" aria-label="Active filters">
-          {state.filters.map((f) => (
-            <Tag key={`${f.dim}:${f.value}`} color="info" onRemove={() => removeFilter(f)} removeLabel={`Remove filter ${dimLabel[f.dim as Dim] ?? f.dim}`}>
-              <span className="text-fg-muted">{dimLabel[f.dim as Dim] ?? f.dim} is</span>&nbsp;<b className="font-medium">{valueLabel(f.dim, f.value)}</b>
-            </Tag>
-          ))}
-          {state.filters.length > 1 && (
-            <Button size="sm" variant="ghost" leadingIcon={<X size={14} />} onClick={clearFilters}>
-              Clear all
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
+      <div ref={sentinel} aria-hidden style={{ height: 1, marginBottom: -1 }} />
+      <div className="toolbar" data-stuck={stuck || undefined} role="toolbar" aria-label="Date range and filters">
+        <PeriodPicker state={state} today={today} onChange={setPeriod} />
+        <CompareSelect value={state.compare} onChange={setCompare} />
+        {state.filters.map((f) => (
+          <span key={`${f.dim}:${f.value}`} className="chip">
+            <span className="label">{dimLabel[f.dim as Dim] ?? f.dim}</span>
+            {valueLabel(f.dim, f.value)}
+            <button type="button" onClick={() => removeFilter(f)} aria-label={`Remove filter ${dimLabel[f.dim as Dim] ?? f.dim}`}>
+              <Icon name="x" />
+            </button>
+          </span>
+        ))}
+        {state.filters.length > 1 && (
+          <Button variant="quiet" size="sm" onClick={clearFilters}>
+            Clear filters
+          </Button>
+        )}
+        <span className="spacer" />
+        {actions}
+      </div>
     </>
   );
 }
@@ -142,68 +117,54 @@ export function OverviewPage({ site }: { site: Site }) {
   const neverSeen = !site.firstHitAt && !site.lastHitAt;
 
   return (
-    <div className="tw-page">
-      <SiteHeader
-        site={site}
+    <>
+      <Toolbar
+        dash={dash}
         actions={
-          <Tooltip content="Download daily aggregates for this range as CSV">
-            <Button asChild variant="secondary" leadingIcon={<Download size={15} />}>
-              <a href={exportHref} download onClick={() => toast({ title: "Preparing your CSV export", tone: "info", duration: 2500 })}>
-                Export
-              </a>
-            </Button>
-          </Tooltip>
+          <ButtonLink href={exportHref} download variant="quiet" title="Daily aggregates for this range, as CSV" onClick={() => toast("Preparing CSV export")}>
+            <Icon name="download" /> Export CSV
+          </ButtonLink>
         }
       />
 
-      <Toolbar dash={dash} />
-
       {neverSeen && (
-        <div
-          className="flex flex-wrap items-center gap-4 rounded-xl border p-4"
-          style={{ borderColor: "var(--orb-color-surface-selected-border)", background: "linear-gradient(100deg, #E3F2FE, #E6FAF6)" }}
-        >
-          <span className="tw-step" aria-hidden>
-            <Sparkles size={15} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="m-0 font-semibold">Waiting for the first pageview</p>
-            <p className="m-0 text-sm text-fg-muted">Add the tracking snippet to {site.domain}. Stats appear here within seconds of the first visit.</p>
+        <div className="notice">
+          <div>
+            <p className="h3">Waiting for the first pageview</p>
+            <p>Add the tracking snippet to {site.domain}. Numbers appear here within seconds of the first visit.</p>
           </div>
-          <AeroButton asChild trailingIcon={<ArrowRight size={16} />}>
-            <Link href={`/sites/${site.id}/install`}>Install tracking code</Link>
-          </AeroButton>
+          <ButtonLink href={`/sites/${site.id}/install`} variant="rule">
+            Install tracking code <Icon name="arrow-right" />
+          </ButtonLink>
         </div>
       )}
 
-      <div className={overview.isPlaceholderData ? "tw-stale" : "tw-fresh"}>
+      <div className={overview.isPlaceholderData ? "is-stale" : "is-fresh"}>
         <MetricTiles totals={data?.totals} compare={data?.compareTotals} compareLabel={cmpLabel} metric={metric} onMetric={setMetric} />
       </div>
 
-      <Panel
-        title={`${metricName[metric]} over time`}
-        description={data ? `By ${data.range.granularity} · ${site.timezone.replace(/_/g, " ")}` : undefined}
-        actions={
-          <div className="flex items-center gap-3">
-            <span className="max-sm:hidden">
-              <ChartLegend metric={metric} compareName={cmpName} />
-            </span>
-            <IconButton
-              label={asTable ? "Show as chart" : "Show as table"}
-              icon={asTable ? <LineChart size={16} /> : <Table2 size={16} />}
-              variant="ghost"
-              size="sm"
-              aria-pressed={asTable}
-              onClick={() => setAsTable((t) => !t)}
-            />
+      <section className="block" aria-label={`${metricName[metric]} over time`}>
+        <header className="block__head">
+          <h2 className="h3">{metricName[metric]} over time</h2>
+          <div className="block__actions">
+            <ChartLegend metric={metric} compareName={cmpName} />
+            <Button variant="quiet" size="sm" aria-pressed={asTable} onClick={() => setAsTable((t) => !t)}>
+              <Icon name={asTable ? "chart" : "table"} /> {asTable ? "Chart" : "Table"}
+            </Button>
           </div>
-        }
-      >
-        <div className={overview.isPlaceholderData ? "tw-stale" : "tw-fresh"}>
+          {data && (
+            <p>
+              By {data.range.granularity} · {site.timezone.replace(/_/g, " ")}
+            </p>
+          )}
+        </header>
+        <div className={overview.isPlaceholderData ? "is-stale" : "is-fresh"}>
           {overview.isPending ? (
-            <Skeleton height={280} radius="md" />
+            <Skeleton height={300} />
           ) : overview.isError ? (
-            <EmptyState title="Couldn't load traffic" description={overview.error.message} actions={<Button onClick={() => void overview.refetch()}>Retry</Button>} />
+            <Empty title="Couldn't load traffic" action={<Button onClick={() => void overview.refetch()}>Retry</Button>}>
+              {overview.error.message}
+            </Empty>
           ) : data && asTable ? (
             <ChartTable series={data.series} compare={data.compareSeries} metric={metric} granularity={data.range.granularity} />
           ) : data ? (
@@ -217,13 +178,10 @@ export function OverviewPage({ site }: { site: Site }) {
               compareName={cmpName ?? undefined}
             />
           ) : null}
-          <div className="mt-2 sm:hidden">
-            <ChartLegend metric={metric} compareName={cmpName} />
-          </div>
         </div>
-      </Panel>
+      </section>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid-2 section-gap">
         <BreakdownCard
           site={site}
           state={state}
@@ -233,7 +191,7 @@ export function OverviewPage({ site }: { site: Site }) {
             { dim: "channel", label: "Channels" },
             { dim: "referrer", label: "Referrers" },
           ]}
-          footer="Attributed to the visit's first page only."
+          footer="Attributed to the first page of a visit."
         />
         <BreakdownCard
           site={site}
@@ -241,19 +199,26 @@ export function OverviewPage({ site }: { site: Site }) {
           title="Pages"
           onFilter={addFilter}
           tabs={[
-            { dim: "page", label: "Top pages" },
-            { dim: "landing", label: "Landing pages" },
+            { dim: "page", label: "Top" },
+            { dim: "landing", label: "Landing" },
           ]}
         />
-        <BreakdownCard site={site} state={state} title="Countries" onFilter={addFilter} tabs={[{ dim: "country", label: "Countries" }]} footer="Estimated from the visitor's time zone — no IP lookup." />
+        <BreakdownCard
+          site={site}
+          state={state}
+          title="Countries"
+          onFilter={addFilter}
+          tabs={[{ dim: "country", label: "Countries" }]}
+          footer="Estimated from the visitor's time zone. No IP lookup."
+        />
         <BreakdownCard
           site={site}
           state={state}
           title="Technology"
           onFilter={addFilter}
           tabs={[
-            { dim: "device", label: "Devices" },
-            { dim: "browser", label: "Browsers" },
+            { dim: "device", label: "Device" },
+            { dim: "browser", label: "Browser" },
             { dim: "os", label: "OS" },
           ]}
         />
@@ -268,42 +233,36 @@ export function OverviewPage({ site }: { site: Site }) {
             { dim: "utm_campaign", label: "Campaign" },
           ]}
           empty={
-            <EmptyState
-              size="sm"
-              title="No campaign traffic"
-              description={
-                <>
-                  Tag links with <span className="tw-inline-code">?utm_source=newsletter</span> to see them here.
-                </>
-              }
-            />
+            <Empty title="No campaign traffic">
+              Tag links with <span className="code-inline">?utm_source=newsletter</span> to see them here.
+            </Empty>
           }
         />
         <BreakdownCard
           site={site}
           state={state}
-          title="Custom events"
+          title="Events"
           onFilter={addFilter}
           tabs={[{ dim: "event", label: "Events" }]}
           empty={
-            <EmptyState
-              size="sm"
+            <Empty
               title="No events yet"
-              description="Track sign-ups, downloads and other actions with one attribute."
-              actions={
-                <Button size="sm" asChild>
-                  <Link href={`/sites/${site.id}/install#events`}>How to send events</Link>
-                </Button>
+              action={
+                <Link className="link" href={`/sites/${site.id}/install#events`}>
+                  How to send events →
+                </Link>
               }
-            />
+            >
+              Track sign-ups, downloads and other actions with one attribute.
+            </Empty>
           }
           footer={
-            <Link href={`/sites/${site.id}/goals`} className="text-accent-fg hover:underline">
+            <Link className="link" href={`/sites/${site.id}/goals`}>
               Turn events into goals →
             </Link>
           }
         />
       </div>
-    </div>
+    </>
   );
 }
