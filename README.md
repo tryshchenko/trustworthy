@@ -26,7 +26,7 @@ Most analytics tools follow people around. Trustworthy measures **pages, not peo
 - 🧮 **Aggregates only.** Hits are folded into hourly counters in memory. Individual requests are never written to disk.
 - 🧹 **Cleaned twice.** The browser strips query strings and fragments, and the server redacts e-mail addresses, IDs and tokens from paths and campaign tags.
 - 🏠 **Self-hosted and independent.** You get one ~14 MB binary and PostgreSQL. Nothing calls home: no telemetry, CDNs or third-party services.
-- ✍️ **A quiet, deliberate interface.** Paper, ink, hairline rules and one blue: a German-minimal dashboard where typography does the work. No component library, no CSS framework, about 30 KB of app code gzipped.
+- ✍️ **A quiet, deliberate interface.** Paper, ink, hairline rules and one deep green: a compact, German-minimal dashboard where typography does the work. No component library, no CSS framework, about 30 KB of app code gzipped.
 
 > Trustworthy is designed so that most sites can measure traffic without a consent banner. **Compliance is never automatic**, though. Read the [privacy model and legal assumptions](docs/privacy.md) before you rely on that.
 

@@ -8,7 +8,7 @@ export const metricName: Record<Metric, string> = {
   events: "Events",
 };
 
-const BLUE = "var(--blue)";
+const BLUE = "var(--accent)";
 const COMPARE = "var(--compare)";
 
 interface Props {
@@ -45,7 +45,7 @@ function useWidth<T extends HTMLElement>() {
  * minute track of a dial; labelled ticks are longer. The comparison is a
  * dashed grey reference, the in-progress bucket a dashed segment.
  */
-export function TrafficChart({ series, compare, metric, granularity, nowKey, compareName = "Previous period", partialLast = false, height = 300 }: Props) {
+export function TrafficChart({ series, compare, metric, granularity, nowKey, compareName = "Previous period", partialLast = false, height = 240 }: Props) {
   const [ref, width] = useWidth<HTMLDivElement>();
   const [active, setActive] = useState<number | null>(null);
 

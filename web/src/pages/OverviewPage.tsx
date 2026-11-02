@@ -160,7 +160,7 @@ export function OverviewPage({ site }: { site: Site }) {
         </header>
         <div className={overview.isPlaceholderData ? "is-stale" : "is-fresh"}>
           {overview.isPending ? (
-            <Skeleton height={300} />
+            <Skeleton height={240} />
           ) : overview.isError ? (
             <Empty title="Couldn't load traffic" action={<Button onClick={() => void overview.refetch()}>Retry</Button>}>
               {overview.error.message}
@@ -181,7 +181,7 @@ export function OverviewPage({ site }: { site: Site }) {
         </div>
       </section>
 
-      <div className="grid-2 section-gap">
+      <div className="grid-2 grid-3 section-gap">
         <BreakdownCard
           site={site}
           state={state}
